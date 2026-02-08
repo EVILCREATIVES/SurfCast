@@ -4,8 +4,15 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { WindWaveLayer } from "./wind-layer";
 import { Button } from "@/components/ui/button";
-import { Wind, Waves } from "lucide-react";
+import { Wind, Waves, Layers } from "lucide-react";
 import type { SurfSpot } from "@shared/schema";
+
+const MAP_LAYERS = [
+  { id: "dark", label: "Dark", url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
+  { id: "satellite", label: "Satellite", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr: '&copy; Esri' },
+  { id: "street", label: "Street", url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
+  { id: "topo", label: "Topo", url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attr: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>' },
+] as const;
 
 const surfPinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
   <defs>
@@ -78,6 +85,9 @@ function FlyToHandler({ onFlyTo }: { onFlyTo?: (fn: (lat: number, lng: number) =
 export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, onMapClick, onFlyTo }: SurfMapProps) {
   const [showWind, setShowWind] = useState(true);
   const [showWaves, setShowWaves] = useState(true);
+  const [layerIdx, setLayerIdx] = useState(0);
+  const [showLayerPicker, setShowLayerPicker] = useState(false);
+  const activeLayer = MAP_LAYERS[layerIdx];
 
   return (
     <div className="w-full h-full relative z-0 isolate" data-testid="map-container">
@@ -89,8 +99,9 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
         zoomControl={false}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          key={activeLayer.id}
+          attribution={activeLayer.attr}
+          url={activeLayer.url}
         />
         <MapClickHandler onMapClick={onMapClick} />
         <FlyToHandler onFlyTo={onFlyTo} />
@@ -129,6 +140,31 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
       </MapContainer>
 
       <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1">
+        <div className="relative">
+          <Button
+            size="icon"
+            variant="secondary"
+            onClick={() => setShowLayerPicker(!showLayerPicker)}
+            data-testid="button-toggle-layers"
+            title="Change map style"
+          >
+            <Layers className="w-4 h-4" />
+          </Button>
+          {showLayerPicker && (
+            <div className="absolute right-10 top-0 bg-background/95 backdrop-blur-sm border border-border rounded-md overflow-hidden shadow-lg" data-testid="layer-picker">
+              {MAP_LAYERS.map((layer, i) => (
+                <button
+                  key={layer.id}
+                  onClick={() => { setLayerIdx(i); setShowLayerPicker(false); }}
+                  className={`block w-full text-left px-3 py-1.5 text-xs whitespace-nowrap hover-elevate ${i === layerIdx ? "bg-primary text-primary-foreground" : "text-foreground"}`}
+                  data-testid={`button-layer-${layer.id}`}
+                >
+                  {layer.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <Button
           size="icon"
           variant={showWind ? "default" : "secondary"}
