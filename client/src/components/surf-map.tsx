@@ -80,7 +80,7 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
   const [showWaves, setShowWaves] = useState(true);
 
   return (
-    <div className="w-full h-full relative" data-testid="map-container">
+    <div className="w-full h-full relative z-0 isolate" data-testid="map-container">
       <MapContainer
         center={[20, 0]}
         zoom={3}
