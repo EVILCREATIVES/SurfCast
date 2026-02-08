@@ -89,7 +89,7 @@ function interpolateWind(
   let u = 0;
   let v = 0;
   let speed = 0;
-  const maxDistSq = 500 * 500;
+  const maxDistSq = 2000 * 2000;
 
   for (const sp of screenPoints) {
     const dx = x - sp.x;
@@ -141,7 +141,8 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
   const fetchGridData = useCallback(async () => {
     const bounds = map.getBounds();
-    const boundsKey = `${bounds.getSouth().toFixed(1)},${bounds.getNorth().toFixed(1)},${bounds.getWest().toFixed(1)},${bounds.getEast().toFixed(1)}`;
+    const zoom = Math.round(map.getZoom());
+    const boundsKey = `${bounds.getSouth().toFixed(2)},${bounds.getNorth().toFixed(2)},${bounds.getWest().toFixed(2)},${bounds.getEast().toFixed(2)},z${zoom}`;
 
     if (boundsKey === lastBoundsRef.current) return;
     lastBoundsRef.current = boundsKey;
@@ -349,8 +350,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       ctx.globalCompositeOperation = "source-over";
 
       const spts = screenPointsRef.current;
-      const zoom = map.getZoom();
-      const speedFactor = SPEED_SCALE * Math.max(1, zoom / 3);
+      const speedFactor = SPEED_SCALE;
 
       for (const p of particlesRef.current) {
         const wind = interpolateWind(p.x, p.y, spts);
@@ -362,7 +362,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         p.prevX = p.x;
         p.prevY = p.y;
 
-        const vel = Math.min(wind.speed * speedFactor, 5);
+        const vel = Math.min(wind.speed * speedFactor, 3);
         const mag = Math.sqrt(wind.u * wind.u + wind.v * wind.v);
         if (mag > 0.01) {
           p.x += (wind.u / mag) * vel;
