@@ -4,7 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { WindWaveLayer } from "./wind-layer";
 import { Button } from "@/components/ui/button";
-import { Wind, Waves, Layers } from "lucide-react";
+import { Wind, Waves } from "lucide-react";
 import type { SurfSpot } from "@shared/schema";
 
 const surfPinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
@@ -77,6 +77,7 @@ function FlyToHandler({ onFlyTo }: { onFlyTo?: (fn: (lat: number, lng: number) =
 
 export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, onMapClick, onFlyTo }: SurfMapProps) {
   const [showWind, setShowWind] = useState(true);
+  const [showWaves, setShowWaves] = useState(true);
 
   return (
     <div className="w-full h-full relative" data-testid="map-container">
@@ -93,7 +94,7 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
         />
         <MapClickHandler onMapClick={onMapClick} />
         <FlyToHandler onFlyTo={onFlyTo} />
-        <WindWaveLayer visible={showWind} />
+        <WindWaveLayer showWind={showWind} showWaves={showWaves} />
 
         {spots.map((spot) => (
           <Marker
@@ -127,7 +128,6 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
         )}
       </MapContainer>
 
-      {/* Layer toggle controls */}
       <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1">
         <Button
           size="icon"
@@ -135,53 +135,75 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
           onClick={() => setShowWind(!showWind)}
           className="toggle-elevate"
           data-testid="button-toggle-wind"
-          title="Toggle wind & wave overlay"
+          title="Toggle wind particles"
         >
           <Wind className="w-4 h-4" />
         </Button>
+        <Button
+          size="icon"
+          variant={showWaves ? "default" : "secondary"}
+          onClick={() => setShowWaves(!showWaves)}
+          className="toggle-elevate"
+          data-testid="button-toggle-waves"
+          title="Toggle wave overlay"
+        >
+          <Waves className="w-4 h-4" />
+        </Button>
       </div>
 
-      {/* Legend */}
-      {showWind && (
-        <div className="absolute bottom-3 right-3 z-[1000] bg-background/80 backdrop-blur-sm rounded-md px-3 py-2 text-xs border border-border">
-          <p className="font-medium mb-1.5 text-foreground/80">Wind & Waves</p>
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ background: "rgba(100, 200, 255, 0.9)" }} />
-                <span className="text-muted-foreground">&lt;3 kts</span>
+      {(showWind || showWaves) && (
+        <div className="absolute bottom-3 right-3 z-[1000] bg-background/80 backdrop-blur-sm rounded-md px-3 py-2 text-xs border border-border" data-testid="legend-panel">
+          <div className="flex items-start gap-5">
+            {showWind && (
+              <div data-testid="legend-wind">
+                <p className="font-medium mb-1.5 text-foreground/80 flex items-center gap-1">
+                  <Wind className="w-3 h-3" /> Wind
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-0.5" style={{ background: "rgba(80, 180, 255, 0.9)" }} />
+                    <span className="text-muted-foreground">&lt;5 kts</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-0.5" style={{ background: "rgba(100, 230, 80, 0.9)" }} />
+                    <span className="text-muted-foreground">10-15 kts</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-0.5" style={{ background: "rgba(255, 190, 30, 0.9)" }} />
+                    <span className="text-muted-foreground">20-30 kts</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-0.5" style={{ background: "rgba(255, 50, 50, 0.9)" }} />
+                    <span className="text-muted-foreground">40+ kts</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ background: "rgba(120, 230, 100, 0.9)" }} />
-                <span className="text-muted-foreground">5-8 kts</span>
+            )}
+            {showWaves && (
+              <div data-testid="legend-waves">
+                <p className="font-medium mb-1.5 text-foreground/80 flex items-center gap-1">
+                  <Waves className="w-3 h-3" /> Waves
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full border" style={{ borderColor: "rgba(60, 190, 210, 0.8)", background: "transparent" }} />
+                    <span className="text-muted-foreground">&lt;3 ft</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full border" style={{ borderColor: "rgba(140, 120, 220, 0.8)", background: "transparent" }} />
+                    <span className="text-muted-foreground">3-6 ft</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full border" style={{ borderColor: "rgba(200, 70, 180, 0.8)", background: "transparent" }} />
+                    <span className="text-muted-foreground">6-12 ft</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full border" style={{ borderColor: "rgba(240, 50, 100, 0.8)", background: "transparent" }} />
+                    <span className="text-muted-foreground">12+ ft</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ background: "rgba(255, 180, 40, 0.9)" }} />
-                <span className="text-muted-foreground">10-16 kts</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ background: "rgba(255, 60, 60, 0.9)" }} />
-                <span className="text-muted-foreground">22+ kts</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ background: "rgba(30, 100, 180, 0.6)" }} />
-                <span className="text-muted-foreground">&lt;1ft</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ background: "rgba(80, 200, 160, 0.7)" }} />
-                <span className="text-muted-foreground">3-6ft</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ background: "rgba(240, 200, 40, 0.8)" }} />
-                <span className="text-muted-foreground">6-12ft</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ background: "rgba(240, 60, 60, 0.9)" }} />
-                <span className="text-muted-foreground">12ft+</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
