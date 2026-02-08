@@ -39,12 +39,12 @@ const BASE_ZOOM = 4;
 
 function getZoomParams(zoom: number) {
   const z = Math.max(2, Math.min(zoom, 18));
-  const ratio = Math.pow(2, BASE_ZOOM - z);
-  const particleCount = Math.round(1500 * Math.max(0.15, Math.min(1.2, ratio)));
-  const speedScale = 0.12 * Math.max(0.25, Math.min(1.5, ratio));
-  const trailFade = Math.min(0.96, 0.92 + (z - BASE_ZOOM) * 0.004);
-  const maxAge = Math.round(120 * Math.max(0.6, Math.min(1.5, 1 / ratio)));
-  const lineWidth = Math.max(0.6, 1.0 - (z - BASE_ZOOM) * 0.04);
+  const delta = z - BASE_ZOOM;
+  const particleCount = Math.round(1500 * Math.max(0.5, Math.min(1.3, 1 - delta * 0.06)));
+  const speedScale = 0.12 * Math.max(0.5, Math.min(1.3, 1 - delta * 0.05));
+  const trailFade = Math.min(0.95, Math.max(0.88, 0.92 + delta * 0.002));
+  const maxAge = Math.round(120 * Math.max(0.8, Math.min(1.3, 1 + delta * 0.03)));
+  const lineWidth = Math.max(0.8, Math.min(1.2, 1.0 - delta * 0.015));
   return { particleCount, speedScale, trailFade, maxAge, lineWidth };
 }
 
@@ -361,7 +361,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
       const spts = screenPointsRef.current;
       const speedFactor = zp.speedScale;
-      const maxVel = 3 * Math.max(0.3, Math.pow(2, BASE_ZOOM - zoomRef.current) * 0.8);
+      const maxVel = 3;
 
       for (const p of particlesRef.current) {
         const wind = interpolateWind(p.x, p.y, spts);
