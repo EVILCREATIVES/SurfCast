@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useMap, useMapEvents } from "react-leaflet";
+import { createPortal } from "react-dom";
 
 interface GridPoint {
   lat: number;
@@ -23,6 +24,8 @@ interface ScreenPoint {
 interface Particle {
   x: number;
   y: number;
+  prevX: number;
+  prevY: number;
   age: number;
   maxAge: number;
 }
@@ -31,32 +34,32 @@ interface WindLayerProps {
   visible: boolean;
 }
 
-const PARTICLE_COUNT = 3000;
-const PARTICLE_LINE_WIDTH = 1.2;
-const MAX_PARTICLE_AGE = 80;
-const SPEED_SCALE = 0.15;
-const TRAIL_FADE = 0.93;
+const PARTICLE_COUNT = 4000;
+const MAX_PARTICLE_AGE = 90;
+const SPEED_SCALE = 0.25;
+const TRAIL_FADE = 0.94;
 
 function getWindColor(speed: number, alpha: number): string {
-  if (speed < 5) return `rgba(100, 200, 255, ${alpha})`;
-  if (speed < 10) return `rgba(80, 220, 180, ${alpha})`;
-  if (speed < 15) return `rgba(120, 230, 100, ${alpha})`;
-  if (speed < 20) return `rgba(200, 220, 60, ${alpha})`;
-  if (speed < 30) return `rgba(255, 180, 40, ${alpha})`;
-  if (speed < 40) return `rgba(255, 120, 40, ${alpha})`;
-  return `rgba(255, 60, 60, ${alpha})`;
+  const a = Math.min(1, alpha);
+  if (speed < 5) return `rgba(80, 180, 255, ${a})`;
+  if (speed < 10) return `rgba(60, 210, 170, ${a})`;
+  if (speed < 15) return `rgba(100, 230, 80, ${a})`;
+  if (speed < 20) return `rgba(200, 230, 50, ${a})`;
+  if (speed < 30) return `rgba(255, 190, 30, ${a})`;
+  if (speed < 40) return `rgba(255, 110, 30, ${a})`;
+  return `rgba(255, 50, 50, ${a})`;
 }
 
 function getWaveColor(height: number): string {
-  if (height < 0.3) return "rgba(30, 60, 120, 0.25)";
-  if (height < 0.5) return "rgba(30, 100, 180, 0.3)";
-  if (height < 1.0) return "rgba(40, 140, 200, 0.35)";
-  if (height < 1.5) return "rgba(50, 180, 200, 0.4)";
-  if (height < 2.0) return "rgba(80, 200, 160, 0.45)";
-  if (height < 3.0) return "rgba(160, 220, 80, 0.5)";
-  if (height < 4.0) return "rgba(240, 200, 40, 0.55)";
-  if (height < 6.0) return "rgba(240, 140, 40, 0.6)";
-  return "rgba(240, 60, 60, 0.65)";
+  if (height < 0.3) return "rgba(30, 60, 120, 0.3)";
+  if (height < 0.5) return "rgba(30, 100, 180, 0.35)";
+  if (height < 1.0) return "rgba(40, 140, 200, 0.4)";
+  if (height < 1.5) return "rgba(50, 180, 200, 0.45)";
+  if (height < 2.0) return "rgba(80, 200, 160, 0.5)";
+  if (height < 3.0) return "rgba(160, 220, 80, 0.55)";
+  if (height < 4.0) return "rgba(240, 200, 40, 0.6)";
+  if (height < 6.0) return "rgba(240, 140, 40, 0.65)";
+  return "rgba(240, 60, 60, 0.7)";
 }
 
 function projectGridToScreen(points: GridPoint[], map: L.Map): ScreenPoint[] {
@@ -85,11 +88,13 @@ function interpolateWind(
   let u = 0;
   let v = 0;
   let speed = 0;
+  const maxDistSq = 500 * 500;
 
   for (const sp of screenPoints) {
     const dx = x - sp.x;
     const dy = y - sp.y;
     const distSq = dx * dx + dy * dy;
+    if (distSq > maxDistSq) continue;
     if (distSq < 1) {
       return { u: sp.u, v: sp.v, speed: sp.speed };
     }
@@ -115,8 +120,20 @@ export function WindWaveLayer({ visible }: WindLayerProps) {
   const animFrameRef = useRef<number>(0);
   const particlesRef = useRef<Particle[]>([]);
   const screenPointsRef = useRef<ScreenPoint[]>([]);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   pointsRef.current = points;
+
+  useEffect(() => {
+    const container = map.getContainer();
+    let target = container.closest('[data-testid="map-container"]') as HTMLElement | null;
+    if (!target) {
+      target = container.parentElement;
+    }
+    if (target) {
+      setPortalTarget(target);
+    }
+  }, [map]);
 
   const fetchGridData = useCallback(async () => {
     const bounds = map.getBounds();
@@ -134,7 +151,6 @@ export function WindWaveLayer({ visible }: WindLayerProps) {
         setPoints(data.points || []);
       }
     } catch {
-      // silently fail
     }
   }, [map]);
 
@@ -157,48 +173,30 @@ export function WindWaveLayer({ visible }: WindLayerProps) {
     }
   }, [visible, fetchGridData]);
 
-  const ensureCanvas = useCallback(
-    (
-      ref: React.MutableRefObject<HTMLCanvasElement | null>,
-      zIndex: string
-    ): HTMLCanvasElement | null => {
-      let canvas = ref.current;
-      if (!canvas) {
-        canvas = document.createElement("canvas");
-        canvas.style.position = "absolute";
-        canvas.style.top = "0";
-        canvas.style.left = "0";
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        canvas.style.pointerEvents = "none";
-        canvas.style.zIndex = zIndex;
-        ref.current = canvas;
-        const pane = map.getPane("overlayPane");
-        if (pane) pane.appendChild(canvas);
-      }
-      const size = map.getSize();
-      if (canvas.width !== size.x || canvas.height !== size.y) {
-        canvas.width = size.x;
-        canvas.height = size.y;
-      }
-      return canvas;
-    },
-    [map]
-  );
+  const syncCanvasSize = useCallback((canvas: HTMLCanvasElement) => {
+    const container = map.getContainer();
+    const rect = container.getBoundingClientRect();
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    return { w, h };
+  }, [map]);
 
   useEffect(() => {
-    if (!visible || points.length === 0) {
-      if (waveCanvasRef.current) waveCanvasRef.current.style.display = "none";
-      return;
-    }
+    if (!visible || points.length === 0) return;
 
-    const canvas = ensureCanvas(waveCanvasRef, "399");
+    const canvas = waveCanvasRef.current;
     if (!canvas) return;
-    canvas.style.display = "block";
+
+    syncCanvasSize(canvas);
 
     const drawWaves = () => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+      syncCanvasSize(canvas);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       for (const pt of points) {
@@ -217,7 +215,7 @@ export function WindWaveLayer({ visible }: WindLayerProps) {
 
         ctx.font = "bold 9px Inter, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillStyle = "rgba(200, 230, 255, 0.85)";
+        ctx.fillStyle = "rgba(200, 230, 255, 0.9)";
         ctx.fillText(`${(pt.waveHeight * 3.28).toFixed(1)}ft`, x, y + 4);
       }
     };
@@ -231,37 +229,29 @@ export function WindWaveLayer({ visible }: WindLayerProps) {
       map.off("move", onMove);
       map.off("zoom", onMove);
     };
-  }, [points, visible, map, ensureCanvas]);
+  }, [points, visible, map, syncCanvasSize]);
 
   useEffect(() => {
     if (!visible || points.length === 0) {
-      if (particleCanvasRef.current) particleCanvasRef.current.style.display = "none";
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       return;
     }
 
-    const canvas = ensureCanvas(particleCanvasRef, "401");
+    const canvas = particleCanvasRef.current;
     if (!canvas) return;
-    canvas.style.display = "block";
 
+    const { w: cw, h: ch } = syncCanvasSize(canvas);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, cw, ch);
 
-    const w = canvas.width;
-    const h = canvas.height;
+    const createParticle = (): Particle => {
+      const x = Math.random() * cw;
+      const y = Math.random() * ch;
+      return { x, y, prevX: x, prevY: y, age: Math.floor(Math.random() * MAX_PARTICLE_AGE), maxAge: MAX_PARTICLE_AGE + Math.floor(Math.random() * 40) };
+    };
 
-    const createParticle = (): Particle => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      age: Math.floor(Math.random() * MAX_PARTICLE_AGE),
-      maxAge: MAX_PARTICLE_AGE + Math.floor(Math.random() * 40),
-    });
-
-    if (particlesRef.current.length !== PARTICLE_COUNT) {
-      particlesRef.current = Array.from({ length: PARTICLE_COUNT }, createParticle);
-    }
-
+    particlesRef.current = Array.from({ length: PARTICLE_COUNT }, createParticle);
     screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
 
     let isMoving = false;
@@ -273,15 +263,15 @@ export function WindWaveLayer({ visible }: WindLayerProps) {
     const onMoveEnd = () => {
       moveTimer = setTimeout(() => {
         isMoving = false;
+        syncCanvasSize(canvas);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const size = map.getSize();
-        if (canvas.width !== size.x || canvas.height !== size.y) {
-          canvas.width = size.x;
-          canvas.height = size.y;
-        }
         screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
-        particlesRef.current = Array.from({ length: PARTICLE_COUNT }, createParticle);
-      }, 150);
+        particlesRef.current = Array.from({ length: PARTICLE_COUNT }, () => {
+          const x = Math.random() * canvas.width;
+          const y = Math.random() * canvas.height;
+          return { x, y, prevX: x, prevY: y, age: Math.floor(Math.random() * MAX_PARTICLE_AGE), maxAge: MAX_PARTICLE_AGE + Math.floor(Math.random() * 40) };
+        });
+      }, 200);
     };
 
     map.on("movestart", onMoveStart);
@@ -292,34 +282,36 @@ export function WindWaveLayer({ visible }: WindLayerProps) {
     const animate = () => {
       if (!visible) return;
 
-      const cw = canvas.width;
-      const ch = canvas.height;
-
       if (isMoving) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         animFrameRef.current = requestAnimationFrame(animate);
         return;
       }
 
+      const w = canvas.width;
+      const h = canvas.height;
+
       ctx.globalCompositeOperation = "destination-in";
       ctx.fillStyle = `rgba(0, 0, 0, ${TRAIL_FADE})`;
-      ctx.fillRect(0, 0, cw, ch);
-      ctx.globalCompositeOperation = "lighter";
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.globalCompositeOperation = "source-over";
 
       const spts = screenPointsRef.current;
       const zoom = map.getZoom();
-      const speedClamp = Math.min(SPEED_SCALE * Math.max(1, zoom / 3), 0.6);
+      const speedFactor = SPEED_SCALE * Math.max(1, zoom / 3);
 
       for (const p of particlesRef.current) {
         const wind = interpolateWind(p.x, p.y, spts);
-        if (!wind) {
+        if (!wind || wind.speed < 0.1) {
           p.age = p.maxAge;
           continue;
         }
 
-        const oldX = p.x;
-        const oldY = p.y;
+        p.prevX = p.x;
+        p.prevY = p.y;
 
-        const vel = Math.min(wind.speed * speedClamp, 4);
+        const vel = Math.min(wind.speed * speedFactor, 5);
         const mag = Math.sqrt(wind.u * wind.u + wind.v * wind.v);
         if (mag > 0.01) {
           p.x += (wind.u / mag) * vel;
@@ -327,28 +319,29 @@ export function WindWaveLayer({ visible }: WindLayerProps) {
         }
         p.age++;
 
-        if (p.x < 0 || p.x > cw || p.y < 0 || p.y > ch || p.age >= p.maxAge) {
-          p.x = Math.random() * cw;
-          p.y = Math.random() * ch;
+        if (p.x < 0 || p.x > w || p.y < 0 || p.y > h || p.age >= p.maxAge) {
+          p.x = Math.random() * w;
+          p.y = Math.random() * h;
+          p.prevX = p.x;
+          p.prevY = p.y;
           p.age = 0;
           p.maxAge = MAX_PARTICLE_AGE + Math.floor(Math.random() * 40);
           continue;
         }
 
-        const ageFactor =
-          p.age < 10
-            ? p.age / 10
-            : p.age > p.maxAge - 10
-              ? (p.maxAge - p.age) / 10
-              : 1;
-        const alpha = Math.min(0.85, 0.2 + wind.speed * 0.02) * ageFactor;
+        const ageFraction = p.age < 8
+          ? p.age / 8
+          : p.age > p.maxAge - 8
+            ? (p.maxAge - p.age) / 8
+            : 1;
+        const alpha = (0.4 + Math.min(wind.speed * 0.025, 0.55)) * ageFraction;
         const color = getWindColor(wind.speed, alpha);
 
         ctx.beginPath();
-        ctx.moveTo(oldX, oldY);
+        ctx.moveTo(p.prevX, p.prevY);
         ctx.lineTo(p.x, p.y);
         ctx.strokeStyle = color;
-        ctx.lineWidth = PARTICLE_LINE_WIDTH + Math.min(wind.speed * 0.015, 0.8);
+        ctx.lineWidth = 1.0 + Math.min(wind.speed * 0.03, 1.2);
         ctx.stroke();
       }
 
@@ -365,29 +358,38 @@ export function WindWaveLayer({ visible }: WindLayerProps) {
       map.off("zoomend", onMoveEnd);
       clearTimeout(moveTimer);
     };
-  }, [points, visible, map, ensureCanvas]);
-
-  useEffect(() => {
-    if (!visible) {
-      if (particleCanvasRef.current) particleCanvasRef.current.style.display = "none";
-      if (waveCanvasRef.current) waveCanvasRef.current.style.display = "none";
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    }
-  }, [visible]);
+  }, [points, visible, map, syncCanvasSize]);
 
   useEffect(() => {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      if (particleCanvasRef.current) {
-        particleCanvasRef.current.remove();
-        particleCanvasRef.current = null;
-      }
-      if (waveCanvasRef.current) {
-        waveCanvasRef.current.remove();
-        waveCanvasRef.current = null;
-      }
     };
   }, []);
 
-  return null;
+  if (!portalTarget || !visible) return null;
+
+  const canvasStyle: React.CSSProperties = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    pointerEvents: "none",
+  };
+
+  return createPortal(
+    <>
+      <canvas
+        ref={waveCanvasRef}
+        style={{ ...canvasStyle, zIndex: 500 }}
+        data-testid="canvas-waves"
+      />
+      <canvas
+        ref={particleCanvasRef}
+        style={{ ...canvasStyle, zIndex: 501 }}
+        data-testid="canvas-particles"
+      />
+    </>,
+    portalTarget
+  );
 }
