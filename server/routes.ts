@@ -91,5 +91,86 @@ export async function registerRoutes(
     }
   });
 
+  // Grid weather data for map overlays (wind arrows + wave colors)
+  app.get("/api/grid-weather", async (req, res) => {
+    try {
+      const { south, north, west, east } = req.query;
+      const s = parseFloat(south as string);
+      const n = parseFloat(north as string);
+      const w = parseFloat(west as string);
+      const e = parseFloat(east as string);
+
+      if ([s, n, w, e].some(isNaN)) {
+        return res.status(400).json({ error: "Invalid bounds" });
+      }
+
+      // Generate a grid of lat/lng pairs
+      const latStep = Math.max(3, (n - s) / 6);
+      const lngStep = Math.max(4, (e - w) / 8);
+
+      const pairLats: number[] = [];
+      const pairLngs: number[] = [];
+
+      for (let lat = s + latStep / 2; lat <= n; lat += latStep) {
+        for (let lng = w + lngStep / 2; lng <= e; lng += lngStep) {
+          pairLats.push(Math.round(lat * 100) / 100);
+          pairLngs.push(Math.round(lng * 100) / 100);
+        }
+      }
+
+      // Limit to 50 points max to stay within API limits
+      if (pairLats.length > 50) {
+        pairLats.length = 50;
+        pairLngs.length = 50;
+      }
+
+      if (pairLats.length === 0) {
+        return res.json({ points: [] });
+      }
+
+      const latStr = pairLats.join(",");
+      const lngStr = pairLngs.join(",");
+
+      const [weatherRes, marineRes] = await Promise.all([
+        fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${latStr}&longitude=${lngStr}&current=wind_speed_10m,wind_direction_10m,temperature_2m&timezone=auto`
+        ),
+        fetch(
+          `https://marine-api.open-meteo.com/v1/marine?latitude=${latStr}&longitude=${lngStr}&current=wave_height,wave_direction,wave_period&timezone=auto`
+        ),
+      ]);
+
+      const weatherData = await weatherRes.json();
+      const marineData = await marineRes.json();
+
+      const points: any[] = [];
+
+      const weatherArr = Array.isArray(weatherData) ? weatherData : [weatherData];
+      const marineArr = Array.isArray(marineData) ? marineData : [marineData];
+
+      for (let i = 0; i < weatherArr.length; i++) {
+        const wd = weatherArr[i];
+        const md = marineArr[i];
+        if (wd && wd.current) {
+          points.push({
+            lat: wd.latitude,
+            lng: wd.longitude,
+            windSpeed: wd.current.wind_speed_10m || 0,
+            windDir: wd.current.wind_direction_10m || 0,
+            temp: wd.current.temperature_2m || 0,
+            waveHeight: md?.current?.wave_height ?? null,
+            waveDir: md?.current?.wave_direction ?? null,
+            wavePeriod: md?.current?.wave_period ?? null,
+          });
+        }
+      }
+
+      res.json({ points });
+    } catch (error) {
+      console.error("Grid weather error:", error);
+      res.status(500).json({ error: "Failed to fetch grid data" });
+    }
+  });
+
   return httpServer;
 }
