@@ -35,10 +35,18 @@ interface WindWaveLayerProps {
   showWaves: boolean;
 }
 
-const PARTICLE_COUNT = 1500;
-const MAX_PARTICLE_AGE = 120;
-const SPEED_SCALE = 0.12;
-const TRAIL_FADE = 0.92;
+const BASE_ZOOM = 4;
+
+function getZoomParams(zoom: number) {
+  const z = Math.max(2, Math.min(zoom, 18));
+  const ratio = Math.pow(2, BASE_ZOOM - z);
+  const particleCount = Math.round(1500 * Math.max(0.15, Math.min(1.2, ratio)));
+  const speedScale = 0.12 * Math.max(0.25, Math.min(1.5, ratio));
+  const trailFade = Math.min(0.96, 0.92 + (z - BASE_ZOOM) * 0.004);
+  const maxAge = Math.round(120 * Math.max(0.6, Math.min(1.5, 1 / ratio)));
+  const lineWidth = Math.max(0.6, 1.0 - (z - BASE_ZOOM) * 0.04);
+  return { particleCount, speedScale, trailFade, maxAge, lineWidth };
+}
 
 function getWindColor(speed: number, alpha: number): string {
   const a = Math.min(1, alpha);
@@ -122,6 +130,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
   const waveAnimFrameRef = useRef<number>(0);
   const particlesRef = useRef<Particle[]>([]);
   const screenPointsRef = useRef<ScreenPoint[]>([]);
+  const zoomRef = useRef<number>(map.getZoom());
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   pointsRef.current = points;
@@ -297,13 +306,16 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     if (!ctx) return;
     ctx.clearRect(0, 0, cw, ch);
 
-    const createParticle = (): Particle => {
-      const x = Math.random() * cw;
-      const y = Math.random() * ch;
-      return { x, y, prevX: x, prevY: y, age: Math.floor(Math.random() * MAX_PARTICLE_AGE), maxAge: MAX_PARTICLE_AGE + Math.floor(Math.random() * 40) };
+    zoomRef.current = map.getZoom();
+    let zp = getZoomParams(zoomRef.current);
+
+    const createParticle = (w: number, h: number, maxAge: number): Particle => {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      return { x, y, prevX: x, prevY: y, age: Math.floor(Math.random() * maxAge), maxAge: maxAge + Math.floor(Math.random() * 40) };
     };
 
-    particlesRef.current = Array.from({ length: PARTICLE_COUNT }, createParticle);
+    particlesRef.current = Array.from({ length: zp.particleCount }, () => createParticle(cw, ch, zp.maxAge));
     screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
 
     let isMoving = false;
@@ -315,14 +327,12 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     const onMoveEnd = () => {
       moveTimer = setTimeout(() => {
         isMoving = false;
+        zoomRef.current = map.getZoom();
+        zp = getZoomParams(zoomRef.current);
         syncCanvasSize(canvas);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
-        particlesRef.current = Array.from({ length: PARTICLE_COUNT }, () => {
-          const x = Math.random() * canvas.width;
-          const y = Math.random() * canvas.height;
-          return { x, y, prevX: x, prevY: y, age: Math.floor(Math.random() * MAX_PARTICLE_AGE), maxAge: MAX_PARTICLE_AGE + Math.floor(Math.random() * 40) };
-        });
+        particlesRef.current = Array.from({ length: zp.particleCount }, () => createParticle(canvas.width, canvas.height, zp.maxAge));
       }, 200);
     };
 
@@ -344,13 +354,14 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       const h = canvas.height;
 
       ctx.globalCompositeOperation = "destination-in";
-      ctx.fillStyle = `rgba(0, 0, 0, ${TRAIL_FADE})`;
+      ctx.fillStyle = `rgba(0, 0, 0, ${zp.trailFade})`;
       ctx.fillRect(0, 0, w, h);
 
       ctx.globalCompositeOperation = "source-over";
 
       const spts = screenPointsRef.current;
-      const speedFactor = SPEED_SCALE;
+      const speedFactor = zp.speedScale;
+      const maxVel = 3 * Math.max(0.3, Math.pow(2, BASE_ZOOM - zoomRef.current) * 0.8);
 
       for (const p of particlesRef.current) {
         const wind = interpolateWind(p.x, p.y, spts);
@@ -362,7 +373,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         p.prevX = p.x;
         p.prevY = p.y;
 
-        const vel = Math.min(wind.speed * speedFactor, 3);
+        const vel = Math.min(wind.speed * speedFactor, maxVel);
         const mag = Math.sqrt(wind.u * wind.u + wind.v * wind.v);
         if (mag > 0.01) {
           p.x += (wind.u / mag) * vel;
@@ -376,7 +387,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
           p.prevX = p.x;
           p.prevY = p.y;
           p.age = 0;
-          p.maxAge = MAX_PARTICLE_AGE + Math.floor(Math.random() * 40);
+          p.maxAge = zp.maxAge + Math.floor(Math.random() * 40);
           continue;
         }
 
@@ -392,7 +403,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         ctx.moveTo(p.prevX, p.prevY);
         ctx.lineTo(p.x, p.y);
         ctx.strokeStyle = color;
-        ctx.lineWidth = 1.0 + Math.min(wind.speed * 0.03, 1.2);
+        ctx.lineWidth = zp.lineWidth + Math.min(wind.speed * 0.03, 1.2);
         ctx.stroke();
       }
 
