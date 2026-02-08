@@ -9,11 +9,29 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+async function geocodeLocation(query: string): Promise<{ lat: number; lng: number; name: string } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+      { headers: { "User-Agent": "SurfCast/1.0" } }
+    );
+    const data = await res.json();
+    if (data && data.length > 0) {
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon),
+        name: data[0].display_name?.split(",")[0] || query,
+      };
+    }
+  } catch {}
+  return null;
+}
+
 async function fetchForecastForAI(lat: number, lng: number): Promise<string> {
   try {
     const [weatherRes, marineRes] = await Promise.all([
       fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&current=temperature_2m,wind_speed_10m,wind_direction_10m&timezone=auto&forecast_days=3`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&current=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m&timezone=auto&forecast_days=3`
       ),
       fetch(
         `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period&current=wave_height,wave_direction,wave_period&timezone=auto&forecast_days=3`
@@ -26,6 +44,7 @@ async function fetchForecastForAI(lat: number, lng: number): Promise<string> {
     if (weather.current) {
       current.push(`Temperature: ${weather.current.temperature_2m}°C`);
       current.push(`Wind: ${weather.current.wind_speed_10m} km/h from ${weather.current.wind_direction_10m}°`);
+      if (weather.current.wind_gusts_10m) current.push(`Wind Gusts: ${weather.current.wind_gusts_10m} km/h`);
     }
     if (marine.current) {
       current.push(`Wave Height: ${marine.current.wave_height}m (${(marine.current.wave_height * 3.28).toFixed(1)}ft)`);
@@ -42,17 +61,108 @@ async function fetchForecastForAI(lat: number, lng: number): Promise<string> {
         const wh = marineHourly.wave_height?.[i] ?? "N/A";
         const wp = marineHourly.wave_period?.[i] ?? "N/A";
         const sw = marineHourly.swell_wave_height?.[i] ?? "N/A";
+        const swDir = marineHourly.swell_wave_direction?.[i] ?? "N/A";
         const ws = hourly.wind_speed_10m?.[i] ?? "N/A";
+        const wg = hourly.wind_gusts_10m?.[i] ?? "N/A";
         const wd = hourly.wind_direction_10m?.[i] ?? "N/A";
         const temp = hourly.temperature_2m?.[i] ?? "N/A";
-        forecastLines.push(`${t}: Waves ${wh}m, Period ${wp}s, Swell ${sw}m, Wind ${ws}km/h@${wd}°, Temp ${temp}°C`);
+        forecastLines.push(`${t}: Waves ${wh}m, Period ${wp}s, Swell ${sw}m@${swDir}°, Wind ${ws}(gusts ${wg})km/h@${wd}°, ${temp}°C`);
       }
     }
 
-    return `CURRENT CONDITIONS at (${lat}, ${lng}):\n${current.join("\n")}\n\n3-DAY FORECAST (every 3 hours):\n${forecastLines.join("\n")}`;
+    return `CURRENT CONDITIONS at (${lat.toFixed(2)}, ${lng.toFixed(2)}):\n${current.join("\n")}\n\n3-DAY FORECAST (every 3h):\n${forecastLines.join("\n")}`;
   } catch {
-    return `Unable to fetch forecast data for (${lat}, ${lng}). Please try again.`;
+    return `Unable to fetch forecast data for (${lat}, ${lng}).`;
   }
+}
+
+interface KnownSpot {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+const KNOWN_SURF_SPOTS: Record<string, KnownSpot> = {
+  "pipeline": { name: "Pipeline, North Shore, Oahu", lat: 21.6650, lng: -158.0530 },
+  "backdoor": { name: "Backdoor Pipeline, Oahu", lat: 21.6650, lng: -158.0530 },
+  "sunset beach": { name: "Sunset Beach, Oahu", lat: 21.6780, lng: -158.0420 },
+  "waimea": { name: "Waimea Bay, Oahu", lat: 21.6419, lng: -158.0656 },
+  "north shore": { name: "North Shore, Oahu", lat: 21.5800, lng: -158.1040 },
+  "teahupoo": { name: "Teahupoo, Tahiti", lat: -17.8539, lng: -149.2556 },
+  "teahupo'o": { name: "Teahupoo, Tahiti", lat: -17.8539, lng: -149.2556 },
+  "cloudbreak": { name: "Cloudbreak, Fiji", lat: -17.8692, lng: 177.1881 },
+  "jeffreys bay": { name: "Jeffreys Bay, South Africa", lat: -33.9614, lng: 25.9519 },
+  "j-bay": { name: "Jeffreys Bay, South Africa", lat: -33.9614, lng: 25.9519 },
+  "supertubes": { name: "Supertubes, Jeffreys Bay", lat: -33.9614, lng: 25.9519 },
+  "uluwatu": { name: "Uluwatu, Bali", lat: -8.8294, lng: 115.0851 },
+  "padang padang": { name: "Padang Padang, Bali", lat: -8.8136, lng: 115.0977 },
+  "keramas": { name: "Keramas, Bali", lat: -8.5875, lng: 115.4550 },
+  "canggu": { name: "Canggu, Bali", lat: -8.6478, lng: 115.1385 },
+  "snapper rocks": { name: "Snapper Rocks, Gold Coast", lat: -28.1693, lng: 153.5517 },
+  "bells beach": { name: "Bells Beach, Victoria", lat: -38.3727, lng: 144.2817 },
+  "hossegor": { name: "Hossegor, France", lat: 43.6670, lng: -1.3980 },
+  "nazare": { name: "Nazare, Portugal", lat: 39.6015, lng: -9.0693 },
+  "peniche": { name: "Peniche, Portugal", lat: 39.3561, lng: -9.3811 },
+  "ericeira": { name: "Ericeira, Portugal", lat: 38.9631, lng: -9.4187 },
+  "mundaka": { name: "Mundaka, Spain", lat: 43.4053, lng: -2.6983 },
+  "trestles": { name: "Trestles, California", lat: 33.3814, lng: -117.5893 },
+  "mavericks": { name: "Mavericks, California", lat: 37.4937, lng: -122.4965 },
+  "rincon": { name: "Rincon, California", lat: 34.3739, lng: -119.4776 },
+  "huntington beach": { name: "Huntington Beach, California", lat: 33.6553, lng: -118.0047 },
+  "malibu": { name: "Malibu, California", lat: 34.0358, lng: -118.6773 },
+  "blacks beach": { name: "Blacks Beach, La Jolla", lat: 32.8893, lng: -117.2534 },
+  "puerto escondido": { name: "Puerto Escondido, Mexico", lat: 15.8610, lng: -97.0730 },
+  "raglan": { name: "Raglan, New Zealand", lat: -37.8047, lng: 174.8619 },
+  "g-land": { name: "G-Land, Java", lat: -8.7350, lng: 114.3700 },
+  "desert point": { name: "Desert Point, Lombok", lat: -8.7490, lng: 115.8250 },
+  "margaret river": { name: "Margaret River, Australia", lat: -33.9530, lng: 114.9963 },
+  "gold coast": { name: "Gold Coast, Australia", lat: -28.1693, lng: 153.5517 },
+  "byron bay": { name: "Byron Bay, Australia", lat: -28.6428, lng: 153.6120 },
+  "noosa": { name: "Noosa, Australia", lat: -26.3814, lng: 153.0889 },
+  "bali": { name: "Bali, Indonesia", lat: -8.8294, lng: 115.0851 },
+  "hawaii": { name: "North Shore, Oahu, Hawaii", lat: 21.5800, lng: -158.1040 },
+  "oahu": { name: "North Shore, Oahu", lat: 21.5800, lng: -158.1040 },
+  "maui": { name: "Hookipa, Maui", lat: 20.9360, lng: -156.3560 },
+  "california": { name: "Huntington Beach, California", lat: 33.6553, lng: -118.0047 },
+  "portugal": { name: "Peniche, Portugal", lat: 39.3561, lng: -9.3811 },
+  "france": { name: "Hossegor, France", lat: 43.6670, lng: -1.3980 },
+  "morocco": { name: "Taghazout, Morocco", lat: 30.5451, lng: -9.7110 },
+  "costa rica": { name: "Playa Hermosa, Costa Rica", lat: 9.5578, lng: -84.5815 },
+  "nicaragua": { name: "Popoyo, Nicaragua", lat: 11.4675, lng: -86.0630 },
+  "sri lanka": { name: "Arugam Bay, Sri Lanka", lat: 6.8392, lng: 81.8366 },
+  "indonesia": { name: "Uluwatu, Bali", lat: -8.8294, lng: 115.0851 },
+  "australia": { name: "Gold Coast, Australia", lat: -28.1693, lng: 153.5517 },
+  "brazil": { name: "Itacare, Bahia, Brazil", lat: -14.2781, lng: -38.9966 },
+  "south africa": { name: "Jeffreys Bay, South Africa", lat: -33.9614, lng: 25.9519 },
+  "japan": { name: "Shonan, Japan", lat: 35.3126, lng: 139.4827 },
+  "mexico": { name: "Puerto Escondido, Mexico", lat: 15.8610, lng: -97.0730 },
+  "fiji": { name: "Cloudbreak, Fiji", lat: -17.8692, lng: 177.1881 },
+  "tahiti": { name: "Teahupoo, Tahiti", lat: -17.8539, lng: -149.2556 },
+  "maldives": { name: "North Male Atoll, Maldives", lat: 4.2550, lng: 73.4530 },
+  "mentawai": { name: "Mentawai, Indonesia", lat: -2.0861, lng: 99.6078 },
+  "taghazout": { name: "Taghazout, Morocco", lat: 30.5451, lng: -9.7110 },
+  "sayulita": { name: "Sayulita, Mexico", lat: 20.8680, lng: -105.4390 },
+  "santa cruz": { name: "Santa Cruz, California", lat: 36.9514, lng: -122.0263 },
+  "la jolla": { name: "La Jolla, California", lat: 32.8328, lng: -117.2713 },
+  "skeleton bay": { name: "Skeleton Bay, Namibia", lat: -24.7640, lng: 14.5260 },
+  "punta de lobos": { name: "Punta de Lobos, Chile", lat: -34.4214, lng: -72.0453 },
+};
+
+function extractMentionedSpots(message: string): KnownSpot[] {
+  const lower = message.toLowerCase();
+  const found: KnownSpot[] = [];
+  const seenNames = new Set<string>();
+  const sortedKeys = Object.keys(KNOWN_SURF_SPOTS).sort((a, b) => b.length - a.length);
+  for (const key of sortedKeys) {
+    if (lower.includes(key)) {
+      const spot = KNOWN_SURF_SPOTS[key];
+      if (!seenNames.has(spot.name)) {
+        seenNames.add(spot.name);
+        found.push(spot);
+      }
+    }
+  }
+  return found;
 }
 
 export async function registerRoutes(
@@ -266,37 +376,99 @@ export async function registerRoutes(
         forecastContext = await fetchForecastForAI(latitude, longitude);
       }
 
-      const nearbyForecasts: string[] = [];
-      const lowerMsg = message.toLowerCase();
-      const locationMentioned = spots.find(s => lowerMsg.includes(s.name.toLowerCase()));
-      if (locationMentioned) {
-        const data = await fetchForecastForAI(locationMentioned.latitude, locationMentioned.longitude);
-        nearbyForecasts.push(`\n--- Forecast for ${locationMentioned.name} ---\n${data}`);
+      const locationForecasts: string[] = [];
+
+      const savedSpotMatch = spots.find(s => message.toLowerCase().includes(s.name.toLowerCase()));
+      if (savedSpotMatch) {
+        const data = await fetchForecastForAI(savedSpotMatch.latitude, savedSpotMatch.longitude);
+        if (data) locationForecasts.push(`\n--- Real-time forecast for ${savedSpotMatch.name} (${savedSpotMatch.latitude}, ${savedSpotMatch.longitude}) ---\n${data}`);
       }
 
-      const systemPrompt = `You are SurfCast AI, an expert surf forecaster and surf travel advisor. You provide real, data-driven surf advice based on actual weather and marine forecast data.
+      const mentionedSpots = extractMentionedSpots(message);
+      let primaryLocation = "";
+      const usedCoords = new Set<string>();
+      if (savedSpotMatch) {
+        usedCoords.add(`${savedSpotMatch.latitude.toFixed(1)},${savedSpotMatch.longitude.toFixed(1)}`);
+        primaryLocation = savedSpotMatch.name;
+      }
 
-YOUR KNOWLEDGE:
-- You understand swell direction, wave period, wind effects on surf quality (offshore vs onshore), tide impacts, and how these factors create good or bad surfing conditions.
-- You know popular surf regions worldwide and can suggest spots based on conditions.
-- Wave height in feet: multiply meters by 3.28. 
-- Offshore wind (blowing from land to sea) = clean waves. Onshore wind = choppy.
-- Longer wave periods (12s+) = more powerful, well-organized swells.
-- Swell direction matters: spots need swell from the right angle to work.
+      const uniqueSpots = mentionedSpots.filter(spot => {
+        const coordKey = `${spot.lat.toFixed(1)},${spot.lng.toFixed(1)}`;
+        if (usedCoords.has(coordKey)) return false;
+        usedCoords.add(coordKey);
+        return true;
+      });
 
-SAVED SURF SPOTS IN THE APP:
+      if (uniqueSpots.length > 0 && !primaryLocation) {
+        primaryLocation = uniqueSpots[0].name;
+      }
+
+      const spotFetchPromises = uniqueSpots.slice(0, 3).map(async (spot) => {
+        const data = await fetchForecastForAI(spot.lat, spot.lng);
+        if (data) return `\n--- Real-time forecast for ${spot.name} (${spot.lat.toFixed(2)}, ${spot.lng.toFixed(2)}) ---\n${data}`;
+        return null;
+      });
+      const spotResults = await Promise.all(spotFetchPromises);
+      locationForecasts.push(...spotResults.filter((r): r is string => r !== null));
+
+      if (mentionedSpots.length === 0 && !savedSpotMatch) {
+        const cleaned = message.replace(/how|are|is|the|conditions|in|at|right|now|today|tomorrow|what|about|like|forecast|for|surf|waves|surfing|good|bad|check/gi, "").trim();
+        if (cleaned.length > 2) {
+          const geo = await geocodeLocation(cleaned);
+          if (geo) {
+            const data = await fetchForecastForAI(geo.lat, geo.lng);
+            if (data) {
+              locationForecasts.push(`\n--- Real-time forecast for ${geo.name} (${geo.lat.toFixed(2)}, ${geo.lng.toFixed(2)}) ---\n${data}`);
+              primaryLocation = geo.name;
+            }
+          }
+        }
+      }
+
+      if (locationForecasts.length === 0 && !forecastContext) {
+        const generalTerms = ["surf", "waves", "conditions", "forecast", "today", "tomorrow", "weekend", "best", "where", "when", "should i"];
+        const isGeneralSurfQ = generalTerms.some(t => message.toLowerCase().includes(t));
+        if (isGeneralSurfQ && spots.length > 0) {
+          const spotsToCheck = spots.slice(0, 5);
+          const forecasts = await Promise.all(
+            spotsToCheck.map(async (s) => {
+              const data = await fetchForecastForAI(s.latitude, s.longitude);
+              return data ? `\n--- Real-time forecast for ${s.name} (${s.latitude}, ${s.longitude}) ---\n${data}` : "";
+            })
+          );
+          locationForecasts.push(...forecasts.filter(Boolean));
+        }
+      }
+
+      const systemPrompt = `You are SurfCast AI, an expert surf forecaster. You ALWAYS analyze the REAL forecast data provided below and give specific, data-driven advice.
+${primaryLocation ? `\nPRIMARY LOCATION REQUESTED: ${primaryLocation} — Focus your answer on this location first.\n` : ""}
+SURF ANALYSIS EXPERTISE:
+- Wave height in feet = meters x 3.28
+- Offshore wind (blowing from land to sea) = clean, groomed waves. Onshore = choppy, messy
+- Cross-shore wind = rideable but less ideal
+- Wave period 12s+ = powerful groundswell, 8-11s = wind swell, <8s = weak chop
+- Swell direction must match the spot's exposure to produce good waves
+- Dawn/dusk sessions often have lighter winds = better conditions
+- Wind typically increases through the day
+
+SAVED SURF SPOTS:
 ${spotListText || "No spots saved yet."}
 
-${forecastContext ? `CURRENT FORECAST DATA (user's current map view):\n${forecastContext}` : ""}
-${nearbyForecasts.length > 0 ? nearbyForecasts.join("\n") : ""}
+${forecastContext ? `MAP VIEW FORECAST (where user is looking):\n${forecastContext}\n` : ""}
+${locationForecasts.length > 0 ? `LOCATION-SPECIFIC FORECASTS:\n${locationForecasts.join("\n")}` : ""}
 
-RULES:
-- Always use REAL forecast data provided above. Never invent conditions.
-- If asked about a location not in the data, offer to check it if coordinates are provided, or suggest well-known nearby spots.
-- Give specific, actionable advice: best time windows, which direction the swell is coming from, wind conditions, etc.
-- Keep responses concise but informative. Use bullet points for forecasts.
-- When suggesting spots, explain WHY conditions suit that spot.
-- If you don't have forecast data for a requested location, say so honestly and suggest the user search for it on the map.`;
+CRITICAL RULES:
+1. ALWAYS reference the actual numbers from the forecast data above. Quote specific wave heights, wind speeds, periods, and directions.
+2. ANALYZE conditions honestly: if conditions are BAD, say so clearly and explain why (onshore wind, small waves, short period, etc.)
+3. When conditions are poor, ALWAYS suggest:
+   - Better time windows from the 3-day forecast (find hours with lower wind, bigger swell)
+   - Alternative nearby locations that might work better given current swell direction
+   - What conditions to wait for
+4. Compare conditions across spots when multiple forecasts are available
+5. Give a clear surf quality rating: EPIC / GOOD / FAIR / POOR / FLAT
+6. Format with bullet points. Be specific with times and numbers.
+7. Never make up data. Only use the real forecast numbers provided above.
+8. If no forecast data is available for a location, tell the user to click on the map near that location or search for it, so you can get real data.`;
 
       const chatMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
         { role: "system", content: systemPrompt },
@@ -319,7 +491,7 @@ RULES:
         model: "gpt-4o-mini",
         messages: chatMessages,
         stream: true,
-        max_tokens: 1024,
+        max_tokens: 1500,
       });
 
       let fullResponse = "";

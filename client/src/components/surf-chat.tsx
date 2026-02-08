@@ -12,9 +12,11 @@ interface ChatMessage {
 interface SurfChatProps {
   latitude?: number | null;
   longitude?: number | null;
+  isMobile?: boolean;
+  hasForecastPanel?: boolean;
 }
 
-export function SurfChat({ latitude, longitude }: SurfChatProps) {
+export function SurfChat({ latitude, longitude, isMobile, hasForecastPanel }: SurfChatProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -141,12 +143,17 @@ export function SurfChat({ latitude, longitude }: SurfChatProps) {
     );
   };
 
+  const buttonBottom = isMobile && hasForecastPanel ? "bottom-16" : "bottom-4";
+  const panelPosition = isMobile
+    ? "fixed inset-x-2 bottom-2 top-16 z-[1001]"
+    : "fixed bottom-4 right-4 z-[1001] w-[360px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-6rem)]";
+
   return (
     <>
       {!open && (
         <Button
           size="icon"
-          className="fixed bottom-4 right-4 z-[1000] h-12 w-12 rounded-full shadow-lg"
+          className={`fixed right-4 ${buttonBottom} z-[1001] h-12 w-12 rounded-full shadow-lg`}
           onClick={() => setOpen(true)}
           data-testid="button-open-chat"
         >
@@ -155,7 +162,7 @@ export function SurfChat({ latitude, longitude }: SurfChatProps) {
       )}
 
       {open && (
-        <Card className="fixed bottom-4 right-4 z-[1000] w-[360px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-6rem)] flex flex-col shadow-xl overflow-hidden">
+        <Card className={`${panelPosition} flex flex-col shadow-xl overflow-hidden`}>
           <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-border shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               <MessageCircle className="w-4 h-4 text-primary shrink-0" />

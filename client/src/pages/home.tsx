@@ -213,8 +213,6 @@ export default function Home() {
           </div>
         )}
 
-        <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} />
-
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent side="left" className="w-[85vw] max-w-xs p-0 flex flex-col">
             <SheetHeader className="px-3 pt-3 pb-2 border-b border-sidebar-border shrink-0">
@@ -229,6 +227,8 @@ export default function Home() {
             {sidebarContent}
           </SheetContent>
         </Sheet>
+
+        <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} isMobile={true} hasForecastPanel={!!forecastLocation} />
 
         <AddSpotDialog
           open={showAddDialog}
@@ -300,7 +300,7 @@ export default function Home() {
         />
       </div>
 
-      <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} />
+      <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} isMobile={false} hasForecastPanel={false} />
 
       <AddSpotDialog
         open={showAddDialog}
