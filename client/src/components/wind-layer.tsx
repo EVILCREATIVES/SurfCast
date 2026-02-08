@@ -35,10 +35,10 @@ interface WindWaveLayerProps {
   showWaves: boolean;
 }
 
-const PARTICLE_COUNT = 4000;
-const MAX_PARTICLE_AGE = 90;
-const SPEED_SCALE = 0.25;
-const TRAIL_FADE = 0.94;
+const PARTICLE_COUNT = 1500;
+const MAX_PARTICLE_AGE = 120;
+const SPEED_SCALE = 0.12;
+const TRAIL_FADE = 0.92;
 
 function getWindColor(speed: number, alpha: number): string {
   const a = Math.min(1, alpha);
