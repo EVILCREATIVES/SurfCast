@@ -152,8 +152,8 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
       </div>
 
       {(showWind || showWaves) && (
-        <div className="absolute bottom-3 right-3 z-[1000] bg-background/80 backdrop-blur-sm rounded-md px-3 py-2 text-xs border border-border" data-testid="legend-panel">
-          <div className="flex items-start gap-5">
+        <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 z-[1000] bg-background/80 backdrop-blur-sm rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[10px] sm:text-xs border border-border" data-testid="legend-panel">
+          <div className="flex items-start gap-3 sm:gap-5">
             {showWind && (
               <div data-testid="legend-wind">
                 <p className="font-medium mb-1.5 text-foreground/80 flex items-center gap-1">
