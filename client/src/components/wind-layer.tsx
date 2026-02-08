@@ -153,8 +153,11 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       if (res.ok) {
         const data = await res.json();
         setPoints(data.points || []);
+      } else {
+        lastBoundsRef.current = "";
       }
     } catch {
+      lastBoundsRef.current = "";
     }
   }, [map]);
 

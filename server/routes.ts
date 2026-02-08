@@ -104,15 +104,26 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid bounds" });
       }
 
-      // Generate a grid of lat/lng pairs
-      const latStep = Math.max(3, (n - s) / 6);
-      const lngStep = Math.max(4, (e - w) / 8);
+      const latSpan = n - s;
+      const lngSpan = e - w;
+      const minSpan = 12;
+      const padLat = Math.max(0, (minSpan - latSpan) / 2);
+      const padLng = Math.max(0, (minSpan - lngSpan) / 2);
+      const gs = Math.max(-90, s - padLat);
+      const gn = Math.min(90, n + padLat);
+      const gw = w - padLng;
+      const ge = e + padLng;
+
+      const gridLatSpan = gn - gs;
+      const gridLngSpan = ge - gw;
+      const latStep = gridLatSpan / 6;
+      const lngStep = gridLngSpan / 8;
 
       const pairLats: number[] = [];
       const pairLngs: number[] = [];
 
-      for (let lat = s + latStep / 2; lat <= n; lat += latStep) {
-        for (let lng = w + lngStep / 2; lng <= e; lng += lngStep) {
+      for (let lat = gs + latStep / 2; lat <= gn; lat += latStep) {
+        for (let lng = gw + lngStep / 2; lng <= ge; lng += lngStep) {
           pairLats.push(Math.round(lat * 100) / 100);
           pairLngs.push(Math.round(lng * 100) / 100);
         }
