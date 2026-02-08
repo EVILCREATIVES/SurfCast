@@ -1,6 +1,6 @@
-import { type User, type InsertUser, type SurfSpot, type InsertSurfSpot, users, surfSpots } from "@shared/schema";
+import { type User, type InsertUser, type SurfSpot, type InsertSurfSpot, type Conversation, type Message, users, surfSpots, conversations, messages } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -10,6 +10,11 @@ export interface IStorage {
   getSpot(id: string): Promise<SurfSpot | undefined>;
   createSpot(spot: InsertSurfSpot): Promise<SurfSpot>;
   deleteSpot(id: string): Promise<void>;
+  createConversation(title: string): Promise<Conversation>;
+  getConversation(id: number): Promise<Conversation | undefined>;
+  getMessagesByConversation(conversationId: number): Promise<Message[]>;
+  createMessage(conversationId: number, role: string, content: string): Promise<Message>;
+  deleteConversation(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -44,6 +49,30 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSpot(id: string): Promise<void> {
     await db.delete(surfSpots).where(eq(surfSpots.id, id));
+  }
+
+  async createConversation(title: string): Promise<Conversation> {
+    const [conv] = await db.insert(conversations).values({ title }).returning();
+    return conv;
+  }
+
+  async getConversation(id: number): Promise<Conversation | undefined> {
+    const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
+    return conv;
+  }
+
+  async getMessagesByConversation(conversationId: number): Promise<Message[]> {
+    return db.select().from(messages).where(eq(messages.conversationId, conversationId)).orderBy(messages.createdAt);
+  }
+
+  async createMessage(conversationId: number, role: string, content: string): Promise<Message> {
+    const [msg] = await db.insert(messages).values({ conversationId, role, content }).returning();
+    return msg;
+  }
+
+  async deleteConversation(id: number): Promise<void> {
+    await db.delete(messages).where(eq(messages.conversationId, id));
+    await db.delete(conversations).where(eq(conversations.id, id));
   }
 }
 

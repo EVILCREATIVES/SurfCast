@@ -11,6 +11,7 @@ import { SearchLocation } from "@/components/search-location";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { SurfChat } from "@/components/surf-chat";
 import { Waves, ChevronLeft, ChevronRight, MapPin, List, X } from "lucide-react";
 import type { SurfSpot, ForecastResponse, InsertSurfSpot } from "@shared/schema";
 
@@ -212,6 +213,8 @@ export default function Home() {
           </div>
         )}
 
+        <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} />
+
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent side="left" className="w-[85vw] max-w-xs p-0 flex flex-col">
             <SheetHeader className="px-3 pt-3 pb-2 border-b border-sidebar-border shrink-0">
@@ -296,6 +299,8 @@ export default function Home() {
           locationName={locationName}
         />
       </div>
+
+      <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} />
 
       <AddSpotDialog
         open={showAddDialog}
