@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from "re
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { WindWaveLayer } from "./wind-layer";
-import { WebcamLayer } from "./webcam-layer";
+import { WebcamLayer, MIN_ZOOM_FOR_WEBCAMS } from "./webcam-layer";
 import { Button } from "@/components/ui/button";
 import { Wind, Waves, Layers, Video } from "lucide-react";
 import type { SurfSpot } from "@shared/schema";
@@ -91,13 +91,26 @@ function MapBackgroundSync({ bg }: { bg: string }) {
   return null;
 }
 
+function ZoomTracker({ onZoomChange }: { onZoomChange: (z: number) => void }) {
+  const map = useMap();
+  useEffect(() => {
+    onZoomChange(map.getZoom());
+    const handler = () => onZoomChange(map.getZoom());
+    map.on("zoomend", handler);
+    return () => { map.off("zoomend", handler); };
+  }, [map, onZoomChange]);
+  return null;
+}
+
 export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, onMapClick, onFlyTo }: SurfMapProps) {
   const [showWind, setShowWind] = useState(true);
   const [showWaves, setShowWaves] = useState(true);
   const [showWebcams, setShowWebcams] = useState(false);
   const [layerIdx, setLayerIdx] = useState(1);
   const [showLayerPicker, setShowLayerPicker] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState(3);
   const activeLayer = MAP_LAYERS[layerIdx];
+  const handleZoomChange = useCallback((z: number) => setCurrentZoom(z), []);
 
   return (
     <div className="w-full h-full relative z-0 isolate" data-testid="map-container">
@@ -121,6 +134,7 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
         <MapBackgroundSync bg={activeLayer.bg} />
         <MapClickHandler onMapClick={onMapClick} />
         <FlyToHandler onFlyTo={onFlyTo} />
+        <ZoomTracker onZoomChange={handleZoomChange} />
         <WindWaveLayer showWind={showWind} showWaves={showWaves} />
         {showWebcams && <WebcamLayer />}
 
@@ -155,6 +169,15 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
           </Marker>
         )}
       </MapContainer>
+
+      {showWebcams && currentZoom < MIN_ZOOM_FOR_WEBCAMS && (
+        <div
+          className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2 rounded-md bg-black/70 text-white text-sm font-medium backdrop-blur-sm pointer-events-none transition-opacity duration-300"
+          data-testid="text-zoom-in-webcams"
+        >
+          Zoom in to see webcams
+        </div>
+      )}
 
       <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1">
         <div className="relative">
