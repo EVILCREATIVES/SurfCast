@@ -102,6 +102,11 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
           key={activeLayer.id}
           attribution={activeLayer.attr}
           url={activeLayer.url}
+          keepBuffer={6}
+          updateWhenZooming={false}
+          updateWhenIdle={false}
+          tileSize={256}
+          maxNativeZoom={18}
         />
         <MapClickHandler onMapClick={onMapClick} />
         <FlyToHandler onFlyTo={onFlyTo} />
