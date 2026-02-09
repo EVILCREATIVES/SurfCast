@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useMap, useMapEvents } from "react-leaflet";
 import { createPortal } from "react-dom";
+import { WindGL, encodeWindToTexture } from "./webgl-wind";
 
 interface GridPoint {
   lat: number;
@@ -13,53 +14,27 @@ interface GridPoint {
   wavePeriod: number | null;
 }
 
-interface ScreenPoint {
-  x: number;
-  y: number;
-  u: number;
-  v: number;
-  speed: number;
-}
-
-interface Particle {
-  x: number;
-  y: number;
-  prevX: number;
-  prevY: number;
-  age: number;
-  maxAge: number;
-}
-
 interface WindWaveLayerProps {
   showWind: boolean;
   showWaves: boolean;
 }
 
-const BASE_ZOOM = 4;
-
-function getZoomParams(zoom: number) {
-  const z = Math.max(2, Math.min(zoom, 18));
-  const delta = Math.max(0, z - BASE_ZOOM);
-  const t = Math.min(1, delta / 6);
-  const ease = t * t;
-  const particleCount = Math.max(150, Math.round(1500 * (1 - ease * 0.9)));
-  const speedScale = 0.12 * Math.max(0.15, 1 - ease * 0.85);
-  const trailFade = Math.min(0.96, 0.92 + ease * 0.04);
-  const maxAge = Math.round(120 * (1 + ease * 0.8));
-  const lineWidth = Math.max(0.5, 1.0 - ease * 0.5);
-  const interpRadius = 2000 + Math.round(delta * delta * 500);
-  return { particleCount, speedScale, trailFade, maxAge, lineWidth, interpRadius };
+interface Particle {
+  x: number;
+  y: number;
+  age: number;
+  maxAge: number;
 }
 
-function getWindColor(speed: number, alpha: number): string {
-  const a = Math.min(1, alpha);
-  if (speed < 5) return `rgba(80, 180, 255, ${a})`;
-  if (speed < 10) return `rgba(60, 210, 170, ${a})`;
-  if (speed < 15) return `rgba(100, 230, 80, ${a})`;
-  if (speed < 20) return `rgba(200, 230, 50, ${a})`;
-  if (speed < 30) return `rgba(255, 190, 30, ${a})`;
-  if (speed < 40) return `rgba(255, 110, 30, ${a})`;
-  return `rgba(255, 50, 50, ${a})`;
+function getMapPaneOffset(map: L.Map): { x: number; y: number } {
+  const container = map.getContainer();
+  const mapPane = container.querySelector(".leaflet-map-pane") as HTMLElement | null;
+  if (!mapPane) return { x: 0, y: 0 };
+  const transform = mapPane.style.transform;
+  if (!transform) return { x: 0, y: 0 };
+  const match = transform.match(/translate3d\(([^,]+),\s*([^,]+)/);
+  if (!match) return { x: 0, y: 0 };
+  return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
 }
 
 function getWaveRingColor(height: number): { r: number; g: number; b: number } {
@@ -88,80 +63,65 @@ function seededRandom(seed: number, index: number): number {
   return x - Math.floor(x);
 }
 
-function getMapPaneOffset(map: L.Map): { x: number; y: number } {
-  const container = map.getContainer();
-  const mapPane = container.querySelector(".leaflet-map-pane") as HTMLElement | null;
-  if (!mapPane) return { x: 0, y: 0 };
-  const transform = mapPane.style.transform;
-  if (!transform) return { x: 0, y: 0 };
-  const match = transform.match(/translate3d\(([^,]+),\s*([^,]+)/);
-  if (!match) return { x: 0, y: 0 };
-  return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
-}
-
-function projectGridToScreen(points: GridPoint[], map: L.Map): ScreenPoint[] {
-  const offset = getMapPaneOffset(map);
-  return points.map((pt) => {
-    const pixel = map.latLngToContainerPoint([pt.lat, pt.lng]);
-    const rad = (pt.windDir * Math.PI) / 180;
-    const knots = pt.windSpeed * 0.5399;
-    return {
-      x: pixel.x - offset.x,
-      y: pixel.y - offset.y,
-      u: -Math.sin(rad) * knots,
-      v: -Math.cos(rad) * knots,
-      speed: knots,
-    };
-  });
+function getWindColor(speed: number): string {
+  if (speed < 5) return `rgba(80, 180, 255, 0.7)`;
+  if (speed < 10) return `rgba(60, 210, 170, 0.7)`;
+  if (speed < 15) return `rgba(100, 230, 80, 0.7)`;
+  if (speed < 20) return `rgba(200, 230, 50, 0.7)`;
+  if (speed < 30) return `rgba(255, 190, 30, 0.7)`;
+  if (speed < 40) return `rgba(255, 110, 30, 0.7)`;
+  return `rgba(255, 50, 50, 0.7)`;
 }
 
 function interpolateWind(
   x: number,
   y: number,
-  screenPoints: ScreenPoint[],
-  maxDist: number = 2000
+  points: GridPoint[],
+  map: L.Map,
+  paneOffset: { x: number; y: number }
 ): { u: number; v: number; speed: number } | null {
-  if (screenPoints.length === 0) return null;
-
-  let totalWeight = 0;
-  let u = 0;
-  let v = 0;
-  let speed = 0;
-  const maxDistSq = maxDist * maxDist;
-
-  for (const sp of screenPoints) {
-    const dx = x - sp.x;
-    const dy = y - sp.y;
-    const distSq = dx * dx + dy * dy;
-    if (distSq > maxDistSq) continue;
-    if (distSq < 1) {
-      return { u: sp.u, v: sp.v, speed: sp.speed };
+  let totalW = 0, uSum = 0, vSum = 0, speedSum = 0;
+  for (const pt of points) {
+    const px = map.latLngToContainerPoint([pt.lat, pt.lng]);
+    const sx = px.x - paneOffset.x;
+    const sy = px.y - paneOffset.y;
+    const dx = x - sx;
+    const dy = y - sy;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < 1) {
+      const rad = (pt.windDir * Math.PI) / 180;
+      return {
+        u: -Math.sin(rad) * pt.windSpeed,
+        v: -Math.cos(rad) * pt.windSpeed,
+        speed: pt.windSpeed,
+      };
     }
-    const w = 1 / distSq;
-    totalWeight += w;
-    u += sp.u * w;
-    v += sp.v * w;
-    speed += sp.speed * w;
+    const w = 1 / (d2 * d2);
+    totalW += w;
+    const rad = (pt.windDir * Math.PI) / 180;
+    uSum += -Math.sin(rad) * pt.windSpeed * w;
+    vSum += -Math.cos(rad) * pt.windSpeed * w;
+    speedSum += pt.windSpeed * w;
   }
-
-  if (totalWeight === 0) return null;
-  return { u: u / totalWeight, v: v / totalWeight, speed: speed / totalWeight };
+  if (totalW === 0) return null;
+  return { u: uSum / totalW, v: vSum / totalW, speed: speedSum / totalW };
 }
 
 export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
   const map = useMap();
-  const particleCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const windCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const windGlRef = useRef<WindGL | null>(null);
+  const animFrameRef = useRef<number>(0);
+  const waveAnimFrameRef = useRef<number>(0);
+  const fallbackAnimRef = useRef<number>(0);
   const [points, setPoints] = useState<GridPoint[]>([]);
   const pointsRef = useRef<GridPoint[]>([]);
   const fetchTimeoutRef = useRef<NodeJS.Timeout>();
   const lastBoundsRef = useRef<string>("");
-  const animFrameRef = useRef<number>(0);
-  const waveAnimFrameRef = useRef<number>(0);
-  const particlesRef = useRef<Particle[]>([]);
-  const screenPointsRef = useRef<ScreenPoint[]>([]);
-  const zoomRef = useRef<number>(map.getZoom());
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const windDataBoundsRef = useRef<{ south: number; north: number; west: number; east: number }>({ south: -90, north: 90, west: -180, east: 180 });
+  const webglSupported = useRef<boolean | null>(null);
 
   pointsRef.current = points;
 
@@ -260,12 +220,212 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
       canvas.height = h;
+      return true;
     }
-    return { w, h };
+    return false;
   }, [map]);
 
   useEffect(() => {
-    if (!showWaves || points.length === 0) {
+    if (!showWind || points.length === 0 || !portalTarget) {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (windGlRef.current) {
+        windGlRef.current.destroy();
+        windGlRef.current = null;
+      }
+      if (fallbackAnimRef.current) cancelAnimationFrame(fallbackAnimRef.current);
+      return;
+    }
+
+    const canvas = windCanvasRef.current;
+    if (!canvas) return;
+
+    syncCanvasSize(canvas);
+
+    if (webglSupported.current === null) {
+      const testGl = canvas.getContext("webgl", { premultipliedAlpha: false, alpha: true });
+      webglSupported.current = !!testGl;
+    }
+
+    if (webglSupported.current) {
+      const gl = canvas.getContext("webgl", { premultipliedAlpha: false, alpha: true });
+      if (!gl) {
+        webglSupported.current = false;
+      } else {
+        return initWebGL(gl, canvas);
+      }
+    }
+
+    return initCanvas2DFallback(canvas);
+  }, [points, showWind, map, syncCanvasSize, portalTarget]);
+
+  function initWebGL(gl: WebGLRenderingContext, canvas: HTMLCanvasElement) {
+    const wind = new WindGL(gl);
+    windGlRef.current = wind;
+
+    const bounds = map.getBounds();
+    const south = bounds.getSouth();
+    const north = bounds.getNorth();
+    const west = bounds.getWest();
+    const east = bounds.getEast();
+
+    windDataBoundsRef.current = { south, north, west, east };
+
+    const windData = encodeWindToTexture(points, south, north, west, east, 64, 32);
+    wind.setWind(windData);
+    wind.setBBox(south, north, west, east);
+
+    const zoom = map.getZoom();
+    if (zoom > 8) {
+      wind.setNumParticles(16384);
+      wind.speedFactor = 0.08;
+    } else if (zoom > 5) {
+      wind.setNumParticles(32768);
+      wind.speedFactor = 0.12;
+    } else {
+      wind.setNumParticles(65536);
+      wind.speedFactor = 0.15;
+    }
+
+    const updateViewport = () => {
+      const container = map.getContainer();
+      const rect = container.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+
+      const db = windDataBoundsRef.current;
+
+      const tlScreen = map.latLngToContainerPoint([db.north, db.west]);
+      const brScreen = map.latLngToContainerPoint([db.south, db.east]);
+
+      const tlX = tlScreen.x / w;
+      const tlY = tlScreen.y / h;
+      const brX = brScreen.x / w;
+      const brY = brScreen.y / h;
+
+      const scaleX = brX - tlX;
+      const scaleY = brY - tlY;
+
+      wind.setViewport([tlX, 1.0 - brY], [scaleX, scaleY]);
+    };
+
+    updateViewport();
+
+    const onMove = () => {
+      updateViewport();
+    };
+
+    const onResize = () => {
+      if (syncCanvasSize(canvas)) {
+        wind.resizeScreen();
+      }
+    };
+
+    map.on("move", onMove);
+    map.on("zoom", onMove);
+    map.on("moveend", onMove);
+    map.on("zoomend", onMove);
+    map.on("resize", onResize);
+
+    const animate = () => {
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      wind.draw();
+      animFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      map.off("move", onMove);
+      map.off("zoom", onMove);
+      map.off("moveend", onMove);
+      map.off("zoomend", onMove);
+      map.off("resize", onResize);
+      wind.destroy();
+      windGlRef.current = null;
+    };
+  }
+
+  function initCanvas2DFallback(canvas: HTMLCanvasElement) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const PARTICLE_COUNT = 2000;
+    const particles: Particle[] = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        age: Math.floor(Math.random() * 120),
+        maxAge: 80 + Math.floor(Math.random() * 80),
+      });
+    }
+
+    const resetParticle = (p: Particle) => {
+      p.x = Math.random() * canvas.width;
+      p.y = Math.random() * canvas.height;
+      p.age = 0;
+      p.maxAge = 80 + Math.floor(Math.random() * 80);
+    };
+
+    const ptsRef = pointsRef;
+
+    const animate = () => {
+      syncCanvasSize(canvas);
+      ctx.globalCompositeOperation = "destination-in";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.92)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalCompositeOperation = "source-over";
+
+      const paneOffset = getMapPaneOffset(map);
+
+      for (const p of particles) {
+        const wind = interpolateWind(p.x, p.y, ptsRef.current, map, paneOffset);
+        if (!wind) {
+          resetParticle(p);
+          continue;
+        }
+
+        const prevX = p.x;
+        const prevY = p.y;
+        const speedScale = 0.12;
+        p.x += wind.u * speedScale;
+        p.y -= wind.v * speedScale;
+        p.age++;
+
+        if (p.age > p.maxAge || p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+          resetParticle(p);
+          continue;
+        }
+
+        const fade = 1 - (p.age / p.maxAge);
+        ctx.beginPath();
+        ctx.moveTo(prevX, prevY);
+        ctx.lineTo(p.x, p.y);
+        ctx.strokeStyle = getWindColor(wind.speed);
+        ctx.globalAlpha = fade * 0.6;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      fallbackAnimRef.current = requestAnimationFrame(animate);
+    };
+
+    fallbackAnimRef.current = requestAnimationFrame(animate);
+
+    const onMoveEnd = () => {};
+    map.on("moveend", onMoveEnd);
+
+    return () => {
+      if (fallbackAnimRef.current) cancelAnimationFrame(fallbackAnimRef.current);
+      map.off("moveend", onMoveEnd);
+    };
+  }
+
+  useEffect(() => {
+    if (!showWaves || points.length === 0 || !portalTarget) {
       if (waveAnimFrameRef.current) cancelAnimationFrame(waveAnimFrameRef.current);
       const canvas = waveCanvasRef.current;
       if (canvas) {
@@ -360,153 +520,13 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       map.off("moveend", onMove);
       map.off("zoomend", onMove);
     };
-  }, [points, showWaves, map, syncCanvasSize]);
-
-  useEffect(() => {
-    if (!showWind || points.length === 0) {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      const canvas = particleCanvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext("2d");
-        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-      return;
-    }
-
-    const canvas = particleCanvasRef.current;
-    if (!canvas) return;
-
-    const { w: cw, h: ch } = syncCanvasSize(canvas);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, cw, ch);
-
-    zoomRef.current = map.getZoom();
-    let zp = getZoomParams(zoomRef.current);
-
-    const createParticle = (w: number, h: number, maxAge: number): Particle => {
-      const x = Math.random() * w;
-      const y = Math.random() * h;
-      return { x, y, prevX: x, prevY: y, age: Math.floor(Math.random() * maxAge), maxAge: maxAge + Math.floor(Math.random() * 40) };
-    };
-
-    particlesRef.current = Array.from({ length: zp.particleCount }, () => createParticle(cw, ch, zp.maxAge));
-    screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
-
-    let needsReproject = false;
-    let needsZoomUpdate = false;
-
-    const onMove = () => { needsReproject = true; };
-    const onZoom = () => { needsReproject = true; needsZoomUpdate = true; };
-
-    map.on("move", onMove);
-    map.on("zoom", onZoom);
-    map.on("moveend", onMove);
-    map.on("zoomend", onZoom);
-
-    const animate = () => {
-      if (!showWind) return;
-
-      const w = canvas.width;
-      const h = canvas.height;
-
-      if (needsReproject) {
-        syncCanvasSize(canvas);
-        screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
-        needsReproject = false;
-      }
-
-      if (needsZoomUpdate) {
-        const newZoom = map.getZoom();
-        if (newZoom !== zoomRef.current) {
-          zoomRef.current = newZoom;
-          const newZp = getZoomParams(newZoom);
-          const currentParticles = particlesRef.current;
-          if (currentParticles.length > newZp.particleCount) {
-            particlesRef.current = currentParticles.slice(0, newZp.particleCount);
-          } else if (currentParticles.length < newZp.particleCount) {
-            const extra = Array.from(
-              { length: newZp.particleCount - currentParticles.length },
-              () => createParticle(canvas.width, canvas.height, newZp.maxAge)
-            );
-            particlesRef.current = [...currentParticles, ...extra];
-          }
-          zp = newZp;
-        }
-        needsZoomUpdate = false;
-      }
-
-      ctx.globalCompositeOperation = "destination-in";
-      ctx.fillStyle = `rgba(0, 0, 0, ${zp.trailFade})`;
-      ctx.fillRect(0, 0, w, h);
-      ctx.globalCompositeOperation = "source-over";
-
-      const spts = screenPointsRef.current;
-      const speedFactor = zp.speedScale;
-      const maxVel = 3;
-
-      for (const p of particlesRef.current) {
-        const wind = interpolateWind(p.x, p.y, spts, zp.interpRadius);
-        if (!wind || wind.speed < 0.1) {
-          p.age = p.maxAge;
-          continue;
-        }
-
-        p.prevX = p.x;
-        p.prevY = p.y;
-
-        const vel = Math.min(wind.speed * speedFactor, maxVel);
-        const mag = Math.sqrt(wind.u * wind.u + wind.v * wind.v);
-        if (mag > 0.01) {
-          p.x += (wind.u / mag) * vel;
-          p.y -= (wind.v / mag) * vel;
-        }
-        p.age++;
-
-        if (p.x < 0 || p.x > w || p.y < 0 || p.y > h || p.age >= p.maxAge) {
-          p.x = Math.random() * w;
-          p.y = Math.random() * h;
-          p.prevX = p.x;
-          p.prevY = p.y;
-          p.age = 0;
-          p.maxAge = zp.maxAge + Math.floor(Math.random() * 40);
-          continue;
-        }
-
-        const ageFraction = p.age < 8
-          ? p.age / 8
-          : p.age > p.maxAge - 8
-            ? (p.maxAge - p.age) / 8
-            : 1;
-        const alpha = (0.4 + Math.min(wind.speed * 0.025, 0.55)) * ageFraction;
-        const color = getWindColor(wind.speed, alpha);
-
-        ctx.beginPath();
-        ctx.moveTo(p.prevX, p.prevY);
-        ctx.lineTo(p.x, p.y);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = zp.lineWidth + Math.min(wind.speed * 0.03, 1.2);
-        ctx.stroke();
-      }
-
-      animFrameRef.current = requestAnimationFrame(animate);
-    };
-
-    animFrameRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      map.off("move", onMove);
-      map.off("zoom", onZoom);
-      map.off("moveend", onMove);
-      map.off("zoomend", onZoom);
-    };
-  }, [points, showWind, map, syncCanvasSize]);
+  }, [points, showWaves, map, syncCanvasSize, portalTarget]);
 
   useEffect(() => {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       if (waveAnimFrameRef.current) cancelAnimationFrame(waveAnimFrameRef.current);
+      if (fallbackAnimRef.current) cancelAnimationFrame(fallbackAnimRef.current);
     };
   }, []);
 
@@ -532,7 +552,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       )}
       {showWind && (
         <canvas
-          ref={particleCanvasRef}
+          ref={windCanvasRef}
           style={canvasStyle}
           data-testid="canvas-particles"
         />
