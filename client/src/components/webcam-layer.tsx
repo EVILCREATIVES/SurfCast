@@ -109,31 +109,42 @@ export function WebcamLayer() {
             },
           }}
         >
-          <Popup maxWidth={320} minWidth={240}>
-            <div className="font-sans" data-testid={`webcam-popup-${cam.id}`}>
-              <p className="font-medium text-sm mb-1">{cam.title}</p>
-              <p className="text-xs text-gray-500 mb-2">
-                {[cam.city, cam.country].filter(Boolean).join(", ")}
-              </p>
+          <Popup maxWidth={320} minWidth={240} className="webcam-popup">
+            <div className="font-sans" data-testid={`webcam-popup-${cam.id}`} style={{ margin: -1 }}>
               {cam.thumbnail && (
-                <img
-                  src={cam.thumbnail}
-                  alt={cam.title}
-                  className="w-full rounded-md mb-2"
-                  style={{ maxHeight: 180, objectFit: "cover" }}
-                  data-testid={`webcam-thumbnail-${cam.id}`}
-                />
+                <div className="relative">
+                  {cam.player ? (
+                    <a href={cam.player} target="_blank" rel="noopener noreferrer" data-testid={`webcam-link-${cam.id}`}>
+                      <img
+                        src={cam.thumbnail}
+                        alt={cam.title}
+                        className="w-full block"
+                        style={{ maxHeight: 200, objectFit: "cover", borderRadius: "inherit" }}
+                        data-testid={`webcam-thumbnail-${cam.id}`}
+                      />
+                    </a>
+                  ) : (
+                    <img
+                      src={cam.thumbnail}
+                      alt={cam.title}
+                      className="w-full block"
+                      style={{ maxHeight: 200, objectFit: "cover", borderRadius: "inherit" }}
+                      data-testid={`webcam-thumbnail-${cam.id}`}
+                    />
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5" style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.7))" }}>
+                    <p className="text-white text-xs font-medium truncate" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
+                      {[cam.city, cam.country].filter(Boolean).join(", ")}
+                    </p>
+                  </div>
+                </div>
               )}
-              {cam.player && (
-                <a
-                  href={cam.player}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline"
-                  data-testid={`webcam-link-${cam.id}`}
-                >
-                  Watch live stream
-                </a>
+              {!cam.thumbnail && (
+                <div className="p-3">
+                  <p className="text-xs text-muted-foreground">
+                    {[cam.city, cam.country].filter(Boolean).join(", ")}
+                  </p>
+                </div>
               )}
             </div>
           </Popup>

@@ -320,3 +320,13 @@
 .leaflet-popup {
   z-index: 900 !important;
 }
+
+.webcam-popup .leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.webcam-popup .leaflet-popup-content {
+  margin: 0 !important;
+  width: auto !important;
+}
