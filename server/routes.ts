@@ -363,50 +363,82 @@ export async function registerRoutes(
         return res.status(500).json({ error: "Webcam API key not configured" });
       }
 
-      const centerLat = (s + n) / 2;
-      const centerLng = (w + e2) / 2;
-      const latDist = (n - s) * 111;
-      const lngDist = (e2 - w) * 111 * Math.cos(centerLat * Math.PI / 180);
-      const radius = Math.min(250, Math.max(10, Math.ceil(Math.sqrt(latDist * latDist + lngDist * lngDist) / 2)));
-
       const BEACH_CATEGORIES = new Set(["beach", "coast"]);
-      const beachWebcams: any[] = [];
       const PAGE_SIZE = 50;
-      const MAX_PAGES = 20;
-      let offset = 0;
-      let totalFromApi = Infinity;
+      const QUERY_RADIUS = 25;
 
-      for (let page = 0; page < MAX_PAGES && offset < totalFromApi && beachWebcams.length < 30; page++) {
-        const url = `https://api.windy.com/webcams/api/v3/webcams?nearby=${centerLat},${centerLng},${radius}&include=images,location,player,categories&limit=${PAGE_SIZE}&offset=${offset}&lang=en`;
+      const latSpan = n - s;
+      const lngSpan = e2 - w;
+      const latStepDeg = (QUERY_RADIUS * 1.5) / 111;
+      const avgLat = (s + n) / 2;
+      const lngStepDeg = (QUERY_RADIUS * 1.5) / (111 * Math.cos(avgLat * Math.PI / 180));
 
-        const response = await fetch(url, {
-          headers: { "x-windy-api-key": apiKey },
-        });
+      const latSteps = Math.max(1, Math.ceil(latSpan / latStepDeg));
+      const lngSteps = Math.max(1, Math.ceil(lngSpan / lngStepDeg));
+      const totalCells = latSteps * lngSteps;
 
-        if (!response.ok) {
-          if (page === 0) {
-            const errText = await response.text();
-            console.error("Windy API error:", response.status, errText);
-            return res.status(502).json({ error: "Webcam API error" });
-          }
-          break;
-        }
-
-        const data = await response.json();
-        totalFromApi = data.total || 0;
-
-        for (const cam of (data.webcams || [])) {
-          const cats = cam.categories || [];
-          if (cats.some((c: any) => BEACH_CATEGORIES.has(c.id))) {
-            beachWebcams.push(cam);
+      const points: { lat: number; lng: number }[] = [];
+      if (totalCells <= 6) {
+        for (let li = 0; li < latSteps; li++) {
+          for (let lj = 0; lj < lngSteps; lj++) {
+            points.push({
+              lat: s + (li + 0.5) * (latSpan / latSteps),
+              lng: w + (lj + 0.5) * (lngSpan / lngSteps),
+            });
           }
         }
-
-        offset += PAGE_SIZE;
-        if ((data.webcams || []).length < PAGE_SIZE) break;
+      } else {
+        points.push({ lat: avgLat, lng: (w + e2) / 2 });
       }
 
-      const webcams = beachWebcams
+      const fetchBeachCams = async (lat: number, lng: number, rad: number) => {
+        const allBeach: any[] = [];
+        const firstUrl = `https://api.windy.com/webcams/api/v3/webcams?nearby=${lat},${lng},${rad}&include=images,location,player,categories&limit=${PAGE_SIZE}&offset=0&lang=en`;
+        const firstResp = await fetch(firstUrl, { headers: { "x-windy-api-key": apiKey } });
+        if (!firstResp.ok) return [];
+        const firstData = await firstResp.json();
+        const total = firstData.total || 0;
+
+        const allPages = [firstData];
+        const extraPages = Math.min(3, Math.ceil(Math.min(total, 200) / PAGE_SIZE) - 1);
+        if (extraPages > 0) {
+          const extras = await Promise.all(
+            Array.from({ length: extraPages }, (_, i) => {
+              const url = `https://api.windy.com/webcams/api/v3/webcams?nearby=${lat},${lng},${rad}&include=images,location,player,categories&limit=${PAGE_SIZE}&offset=${(i + 1) * PAGE_SIZE}&lang=en`;
+              return fetch(url, { headers: { "x-windy-api-key": apiKey } }).then(r => r.ok ? r.json() : { webcams: [] });
+            })
+          );
+          allPages.push(...extras);
+        }
+
+        for (const page of allPages) {
+          for (const cam of (page.webcams || [])) {
+            const cats = cam.categories || [];
+            if (cats.some((c: any) => BEACH_CATEGORIES.has(c.id))) {
+              allBeach.push(cam);
+            }
+          }
+        }
+        return allBeach;
+      };
+
+      const effectiveRadius = totalCells <= 6 ? QUERY_RADIUS : Math.min(250, Math.max(10, Math.ceil(Math.sqrt(
+        ((n - s) * 111) ** 2 + ((e2 - w) * 111 * Math.cos(avgLat * Math.PI / 180)) ** 2
+      ) / 2)));
+
+      const results = await Promise.all(
+        points.map(p => fetchBeachCams(p.lat, p.lng, totalCells <= 6 ? QUERY_RADIUS : effectiveRadius))
+      );
+
+      const seen = new Set<number>();
+      const webcams = results.flat()
+        .filter((cam: any) => {
+          if (!cam.webcamId || seen.has(cam.webcamId)) return false;
+          seen.add(cam.webcamId);
+          const lat = cam.location?.latitude;
+          const lng = cam.location?.longitude;
+          return lat != null && lng != null && lat >= s && lat <= n && lng >= w && lng <= e2;
+        })
         .map((cam: any) => ({
           id: cam.webcamId,
           title: cam.title,
@@ -416,8 +448,7 @@ export async function registerRoutes(
           country: cam.location?.country,
           thumbnail: cam.images?.current?.preview || cam.images?.current?.thumbnail || cam.images?.current?.icon,
           player: cam.player?.lifetime?.day || cam.player?.lifetime?.month || null,
-        }))
-        .filter((cam: any) => cam.lat != null && cam.lng != null && cam.id);
+        }));
 
       res.json({ webcams });
     } catch (error) {
