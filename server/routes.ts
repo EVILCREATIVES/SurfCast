@@ -9,6 +9,12 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+const gridWeatherCache = new Map<string, { data: any; timestamp: number }>();
+const GRID_CACHE_TTL = 10 * 60 * 1000;
+
+const forecastCache = new Map<string, { data: any; timestamp: number }>();
+const FORECAST_CACHE_TTL = 10 * 60 * 1000;
+
 async function geocodeLocation(query: string): Promise<{ lat: number; lng: number; name: string } | null> {
   try {
     const res = await fetch(
@@ -212,6 +218,12 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid coordinates" });
       }
 
+      const fKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+      const fCached = forecastCache.get(fKey);
+      if (fCached && Date.now() - fCached.timestamp < FORECAST_CACHE_TTL) {
+        return res.json(fCached.data);
+      }
+
       const [weatherRes, marineRes] = await Promise.all([
         fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code&timezone=auto&forecast_days=7`
@@ -225,6 +237,7 @@ export async function registerRoutes(
       const marineData = await marineRes.json();
 
       if (weatherData.error || marineData.error) {
+        if (fCached) return res.json(fCached.data);
         return res.status(502).json({
           error: "Weather service error",
           details: weatherData.error || marineData.error,
@@ -245,6 +258,15 @@ export async function registerRoutes(
         longitude: weatherData.longitude || longitude,
         timezone: weatherData.timezone || "UTC",
       };
+
+      forecastCache.set(fKey, { data: response, timestamp: Date.now() });
+
+      if (forecastCache.size > 200) {
+        const oldest = [...forecastCache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp);
+        for (let i = 0; i < oldest.length - 100; i++) {
+          forecastCache.delete(oldest[i][0]);
+        }
+      }
 
       res.json(response);
     } catch (error) {
@@ -303,6 +325,12 @@ export async function registerRoutes(
 
       const latStr = pairLats.join(",");
       const lngStr = pairLngs.join(",");
+      const cacheKey = `${latStr}|${lngStr}`;
+
+      const cached = gridWeatherCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < GRID_CACHE_TTL) {
+        return res.json(cached.data);
+      }
 
       const [weatherRes, marineRes] = await Promise.all([
         fetch(
@@ -315,6 +343,11 @@ export async function registerRoutes(
 
       const weatherData = await weatherRes.json();
       const marineData = await marineRes.json();
+
+      if (weatherData.error) {
+        if (cached) return res.json(cached.data);
+        return res.status(429).json({ error: "API rate limit exceeded", points: [] });
+      }
 
       const points: any[] = [];
 
@@ -338,7 +371,17 @@ export async function registerRoutes(
         }
       }
 
-      res.json({ points });
+      const result = { points };
+      gridWeatherCache.set(cacheKey, { data: result, timestamp: Date.now() });
+
+      if (gridWeatherCache.size > 100) {
+        const oldest = [...gridWeatherCache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp);
+        for (let i = 0; i < oldest.length - 50; i++) {
+          gridWeatherCache.delete(oldest[i][0]);
+        }
+      }
+
+      res.json(result);
     } catch (error) {
       console.error("Grid weather error:", error);
       res.status(500).json({ error: "Failed to fetch grid data" });
