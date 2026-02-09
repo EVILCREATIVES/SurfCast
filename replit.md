@@ -15,7 +15,8 @@ A Ventusky/Windy-style surf forecast application with real-time wind, wave, and 
 client/src/
   components/
     surf-map.tsx        - Leaflet map with spot markers
-    forecast-panel.tsx  - Right panel with weather/wave data
+    webcam-layer.tsx    - Beach webcam markers from Windy API
+    forecast-panel.tsx  - Floating overlay with weather/wave data
     spot-list.tsx       - Left sidebar spot list
     add-spot-dialog.tsx - Dialog form for saving spots
     search-location.tsx - Nominatim geocoding search
@@ -43,11 +44,13 @@ shared/
 - `POST /api/spots` - Create a new spot
 - `DELETE /api/spots/:id` - Delete a spot
 - `GET /api/forecast/:lat/:lng` - Fetch combined weather + marine forecast
+- `GET /api/webcams?south=&north=&west=&east=` - Fetch beach webcams in map bounds (Windy API)
 
 ## External APIs
 - Weather: `https://api.open-meteo.com/v1/forecast`
 - Marine: `https://marine-api.open-meteo.com/v1/marine`
 - Geocoding: `https://nominatim.openstreetmap.org/search`
+- Webcams: `https://api.windy.com/webcams/api/v3/webcams` (beach category, requires WINDY_WEBCAMS_API_KEY)
 
 ## User Preferences
 - Dark mode by default (ocean/surf theme)

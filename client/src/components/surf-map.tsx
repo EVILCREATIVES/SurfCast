@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { WindWaveLayer } from "./wind-layer";
+import { WebcamLayer } from "./webcam-layer";
 import { Button } from "@/components/ui/button";
-import { Wind, Waves, Layers } from "lucide-react";
+import { Wind, Waves, Layers, Camera } from "lucide-react";
 import type { SurfSpot } from "@shared/schema";
 
 const MAP_LAYERS = [
@@ -93,6 +94,7 @@ function MapBackgroundSync({ bg }: { bg: string }) {
 export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, onMapClick, onFlyTo }: SurfMapProps) {
   const [showWind, setShowWind] = useState(true);
   const [showWaves, setShowWaves] = useState(true);
+  const [showWebcams, setShowWebcams] = useState(false);
   const [layerIdx, setLayerIdx] = useState(1);
   const [showLayerPicker, setShowLayerPicker] = useState(false);
   const activeLayer = MAP_LAYERS[layerIdx];
@@ -120,6 +122,7 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
         <MapClickHandler onMapClick={onMapClick} />
         <FlyToHandler onFlyTo={onFlyTo} />
         <WindWaveLayer showWind={showWind} showWaves={showWaves} />
+        {showWebcams && <WebcamLayer />}
 
         {spots.map((spot) => (
           <Marker
@@ -198,6 +201,16 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
           title="Toggle wave overlay"
         >
           <Waves className="w-4 h-4" />
+        </Button>
+        <Button
+          size="icon"
+          variant={showWebcams ? "default" : "secondary"}
+          onClick={() => setShowWebcams(!showWebcams)}
+          className="toggle-elevate"
+          data-testid="button-toggle-webcams"
+          title="Toggle beach webcams"
+        >
+          <Camera className="w-4 h-4" />
         </Button>
       </div>
 

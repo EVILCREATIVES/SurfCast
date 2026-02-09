@@ -345,6 +345,63 @@ export async function registerRoutes(
     }
   });
 
+  // Webcams - Windy Webcams API (beach category)
+  app.get("/api/webcams", async (req, res) => {
+    try {
+      const { south, north, west, east } = req.query;
+      const s = parseFloat(south as string);
+      const n = parseFloat(north as string);
+      const w = parseFloat(west as string);
+      const e2 = parseFloat(east as string);
+
+      if ([s, n, w, e2].some(isNaN)) {
+        return res.status(400).json({ error: "Invalid bounds" });
+      }
+
+      const apiKey = process.env.WINDY_WEBCAMS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Webcam API key not configured" });
+      }
+
+      const centerLat = (s + n) / 2;
+      const centerLng = (w + e2) / 2;
+      const latDist = (n - s) * 111;
+      const lngDist = (e2 - w) * 111 * Math.cos(centerLat * Math.PI / 180);
+      const radius = Math.min(250, Math.max(10, Math.ceil(Math.sqrt(latDist * latDist + lngDist * lngDist) / 2)));
+
+      const url = `https://api.windy.com/webcams/api/v3/webcams?nearby=${centerLat},${centerLng},${radius}&category=beach&include=images,location,player&limit=50&lang=en`;
+
+      const response = await fetch(url, {
+        headers: { "x-windy-api-key": apiKey },
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Windy API error:", response.status, errText);
+        return res.status(502).json({ error: "Webcam API error" });
+      }
+
+      const data = await response.json();
+      const webcams = (data.webcams || [])
+        .map((cam: any) => ({
+          id: cam.webcamId,
+          title: cam.title,
+          lat: cam.location?.latitude,
+          lng: cam.location?.longitude,
+          city: cam.location?.city,
+          country: cam.location?.country,
+          thumbnail: cam.images?.current?.preview || cam.images?.current?.thumbnail || cam.images?.current?.icon,
+          player: cam.player?.lifetime?.day || cam.player?.lifetime?.month || null,
+        }))
+        .filter((cam: any) => cam.lat != null && cam.lng != null && cam.id);
+
+      res.json({ webcams });
+    } catch (error) {
+      console.error("Webcams error:", error);
+      res.status(500).json({ error: "Failed to fetch webcams" });
+    }
+  });
+
   // AI Surf Chat
   app.post("/api/chat", async (req, res) => {
     try {
