@@ -263,14 +263,6 @@ export default function Home() {
           <Waves className="w-5 h-5 text-primary shrink-0" />
           <h1 className="text-base font-bold tracking-tight truncate">SurfCast</h1>
           <div className="ml-auto flex items-center gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => navigate("/sessions")}
-              data-testid="button-sessions-desktop"
-            >
-              <Activity className="w-4 h-4" />
-            </Button>
             <ThemeToggle />
           </div>
         </div>
@@ -287,15 +279,24 @@ export default function Home() {
           onFlyTo={(fn) => { flyToRef.current = fn; }}
         />
 
-        <Button
-          size="icon"
-          variant="secondary"
-          className="absolute top-3 left-3 z-[1000]"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          data-testid="button-toggle-sidebar"
-        >
-          {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        </Button>
+        <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="secondary"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            data-testid="button-toggle-sidebar"
+          >
+            {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/sessions")}
+            data-testid="button-sessions-desktop"
+          >
+            <Activity className="w-4 h-4 mr-1.5" />
+            Your Sessions
+          </Button>
+        </div>
 
         {clickedLocation && (
           <Button
