@@ -24,19 +24,20 @@ client/src/
     theme-toggle.tsx    - Theme toggle button
   pages/
     home.tsx            - Main layout page
+    sessions.tsx        - Dawn Patrol-style surf sessions page with GPS track map
   lib/
     weather-utils.ts    - Wind/wave formatting utilities
     queryClient.ts      - TanStack Query config
 
 server/
   index.ts    - Express server entry
-  routes.ts   - API routes (/api/spots, /api/forecast/:lat/:lng)
+  routes.ts   - API routes (/api/spots, /api/forecast/:lat/:lng, /api/sessions)
   storage.ts  - Database CRUD interface
   db.ts       - Drizzle/pg pool setup
-  seed.ts     - Seeds default surf spots
+  seed.ts     - Seeds default surf spots + example session
 
 shared/
-  schema.ts   - Drizzle schema + TypeScript types
+  schema.ts   - Drizzle schema + TypeScript types (surfSpots, surfSessions, conversations, messages)
 ```
 
 ## Key APIs
@@ -45,6 +46,10 @@ shared/
 - `DELETE /api/spots/:id` - Delete a spot
 - `GET /api/forecast/:lat/:lng` - Fetch combined weather + marine forecast
 - `GET /api/webcams?south=&north=&west=&east=` - Fetch beach webcams in map bounds (Windy API)
+- `GET /api/sessions` - List all surf sessions (ordered by date desc)
+- `POST /api/sessions` - Create a new session (with GPS track data)
+- `GET /api/sessions/:id` - Get a specific session
+- `DELETE /api/sessions/:id` - Delete a session
 
 ## External APIs
 - Weather: `https://api.open-meteo.com/v1/forecast`

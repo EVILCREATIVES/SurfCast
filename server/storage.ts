@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type SurfSpot, type InsertSurfSpot, type Conversation, type Message, users, surfSpots, conversations, messages } from "@shared/schema";
+import { type User, type InsertUser, type SurfSpot, type InsertSurfSpot, type SurfSession, type InsertSurfSession, type Conversation, type Message, users, surfSpots, surfSessions, conversations, messages } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
@@ -10,6 +10,10 @@ export interface IStorage {
   getSpot(id: string): Promise<SurfSpot | undefined>;
   createSpot(spot: InsertSurfSpot): Promise<SurfSpot>;
   deleteSpot(id: string): Promise<void>;
+  getAllSessions(): Promise<SurfSession[]>;
+  getSession(id: string): Promise<SurfSession | undefined>;
+  createSession(session: InsertSurfSession): Promise<SurfSession>;
+  deleteSession(id: string): Promise<void>;
   createConversation(title: string): Promise<Conversation>;
   getConversation(id: number): Promise<Conversation | undefined>;
   getMessagesByConversation(conversationId: number): Promise<Message[]>;
@@ -73,6 +77,24 @@ export class DatabaseStorage implements IStorage {
   async deleteConversation(id: number): Promise<void> {
     await db.delete(messages).where(eq(messages.conversationId, id));
     await db.delete(conversations).where(eq(conversations.id, id));
+  }
+
+  async getAllSessions(): Promise<SurfSession[]> {
+    return db.select().from(surfSessions).orderBy(desc(surfSessions.sessionDate));
+  }
+
+  async getSession(id: string): Promise<SurfSession | undefined> {
+    const [session] = await db.select().from(surfSessions).where(eq(surfSessions.id, id));
+    return session;
+  }
+
+  async createSession(session: InsertSurfSession): Promise<SurfSession> {
+    const [created] = await db.insert(surfSessions).values(session).returning();
+    return created;
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    await db.delete(surfSessions).where(eq(surfSessions.id, id));
   }
 }
 

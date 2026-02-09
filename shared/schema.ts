@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, serial, integer, text, varchar, doublePrecision, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, varchar, doublePrecision, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -62,6 +62,45 @@ export type Conversation = typeof conversations.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+export const surfSessions = pgTable("surf_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  spotName: text("spot_name").notNull(),
+  latitude: doublePrecision("latitude").notNull(),
+  longitude: doublePrecision("longitude").notNull(),
+  sessionDate: timestamp("session_date").notNull(),
+  waterTimeMinutes: integer("water_time_minutes").notNull(),
+  waveCount: integer("wave_count").notNull(),
+  distanceMiles: doublePrecision("distance_miles").notNull(),
+  longestWaveSeconds: integer("longest_wave_seconds").notNull(),
+  maxSpeed: doublePrecision("max_speed"),
+  trackData: jsonb("track_data").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSurfSessionSchema = createInsertSchema(surfSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSurfSession = z.infer<typeof insertSurfSessionSchema>;
+export type SurfSession = typeof surfSessions.$inferSelect;
+
+export interface TrackPoint {
+  lat: number;
+  lng: number;
+  time: number;
+  speed?: number;
+}
+
+export interface TrackWave {
+  points: TrackPoint[];
+}
+
+export interface SessionTrackData {
+  paddlePath: TrackPoint[];
+  waves: TrackWave[];
+}
 
 export interface WeatherData {
   time: string[];

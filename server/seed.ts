@@ -1,5 +1,6 @@
 import { db } from "./db";
-import { surfSpots } from "@shared/schema";
+import { surfSpots, surfSessions } from "@shared/schema";
+import type { SessionTrackData } from "@shared/schema";
 
 const defaultSpots = [
   // Hawaii
@@ -41,17 +42,118 @@ const defaultSpots = [
   { name: "Coxos", latitude: 39.229, longitude: -9.405, description: "Portugal's premier right-hand reef break near Ericeira.", difficulty: "advanced" },
 ];
 
+function generateSilverStrandSession(): SessionTrackData {
+  const baseLat = 32.6305;
+  const baseLng = -117.1420;
+  const jettyLat = 32.6290;
+  const jettyLng = -117.1435;
+
+  const paddlePath: { lat: number; lng: number; time: number }[] = [];
+  const waves: { points: { lat: number; lng: number; time: number; speed?: number }[] }[] = [];
+
+  let t = 0;
+  const addPaddle = (lat: number, lng: number) => {
+    paddlePath.push({ lat, lng, time: t });
+    t += 15;
+  };
+
+  addPaddle(baseLat, baseLng);
+  addPaddle(baseLat + 0.0005, baseLng - 0.0003);
+  addPaddle(baseLat + 0.0012, baseLng - 0.0007);
+  addPaddle(baseLat + 0.0018, baseLng - 0.0010);
+  addPaddle(baseLat + 0.0025, baseLng - 0.0008);
+
+  const waveStarts = [
+    { lat: baseLat + 0.0028, lng: baseLng - 0.0006 },
+    { lat: baseLat + 0.0030, lng: baseLng - 0.0009 },
+    { lat: baseLat + 0.0026, lng: baseLng - 0.0004 },
+    { lat: baseLat + 0.0032, lng: baseLng - 0.0011 },
+    { lat: baseLat + 0.0027, lng: baseLng - 0.0007 },
+    { lat: baseLat + 0.0031, lng: baseLng - 0.0005 },
+    { lat: baseLat + 0.0029, lng: baseLng - 0.0008 },
+    { lat: baseLat + 0.0033, lng: baseLng - 0.0010 },
+    { lat: baseLat + 0.0025, lng: baseLng - 0.0006 },
+    { lat: baseLat + 0.0034, lng: baseLng - 0.0012 },
+    { lat: baseLat + 0.0028, lng: baseLng - 0.0003 },
+    { lat: baseLat + 0.0030, lng: baseLng - 0.0007 },
+    { lat: baseLat + 0.0026, lng: baseLng - 0.0009 },
+    { lat: baseLat + 0.0032, lng: baseLng - 0.0005 },
+    { lat: baseLat + 0.0029, lng: baseLng - 0.0011 },
+    { lat: baseLat + 0.0031, lng: baseLng - 0.0004 },
+    { lat: baseLat + 0.0027, lng: baseLng - 0.0008 },
+    { lat: baseLat + 0.0035, lng: baseLng - 0.0006 },
+    { lat: baseLat + 0.0024, lng: baseLng - 0.0010 },
+    { lat: baseLat + 0.0033, lng: baseLng - 0.0003 },
+    { lat: baseLat + 0.0028, lng: baseLng - 0.0005 },
+    { lat: baseLat + 0.0030, lng: baseLng - 0.0012 },
+    { lat: baseLat + 0.0026, lng: baseLng - 0.0007 },
+    { lat: baseLat + 0.0034, lng: baseLng - 0.0009 },
+    { lat: baseLat + 0.0029, lng: baseLng - 0.0004 },
+    { lat: baseLat + 0.0031, lng: baseLng - 0.0008 },
+    { lat: baseLat + 0.0027, lng: baseLng - 0.0006 },
+    { lat: baseLat + 0.0033, lng: baseLng - 0.0011 },
+    { lat: baseLat + 0.0025, lng: baseLng - 0.0005 },
+    { lat: baseLat + 0.0032, lng: baseLng - 0.0003 },
+    { lat: baseLat + 0.0028, lng: baseLng - 0.0009 },
+    { lat: baseLat + 0.0030, lng: baseLng - 0.0006 },
+    { lat: baseLat + 0.0035, lng: baseLng - 0.0010 },
+  ];
+
+  for (const ws of waveStarts) {
+    const wavePoints: { lat: number; lng: number; time: number; speed?: number }[] = [];
+    const rideDirLat = -0.0004 + Math.random() * 0.0002;
+    const rideDirLng = 0.0003 + Math.random() * 0.0004;
+    const numPts = 5 + Math.floor(Math.random() * 6);
+    const speed = 8 + Math.random() * 14;
+
+    for (let i = 0; i < numPts; i++) {
+      const frac = i / (numPts - 1);
+      const curve = Math.sin(frac * Math.PI * (0.8 + Math.random() * 0.6));
+      wavePoints.push({
+        lat: ws.lat + rideDirLat * frac + curve * 0.00008 * (Math.random() - 0.5),
+        lng: ws.lng + rideDirLng * frac + curve * 0.00015 * (Math.random() > 0.5 ? 1 : -1),
+        time: t,
+        speed: speed * (1 - frac * 0.3),
+      });
+      t += 2;
+    }
+    waves.push({ points: wavePoints });
+
+    addPaddle(ws.lat - 0.0002, ws.lng + 0.0001);
+    addPaddle(ws.lat, ws.lng);
+  }
+
+  return { paddlePath, waves };
+}
+
 export async function seedDatabase() {
   try {
     const existing = await db.select().from(surfSpots);
     if (existing.length <= 5) {
       if (existing.length > 0) {
-        // Clear old small seed data
         const { sql } = await import("drizzle-orm");
         await db.delete(surfSpots);
       }
       await db.insert(surfSpots).values(defaultSpots);
       console.log(`Seeded database with ${defaultSpots.length} surf spots`);
+    }
+
+    const existingSessions = await db.select().from(surfSessions);
+    if (existingSessions.length === 0) {
+      const trackData = generateSilverStrandSession();
+      await db.insert(surfSessions).values({
+        spotName: "Silver Strand",
+        latitude: 32.6305,
+        longitude: -117.1420,
+        sessionDate: new Date("2026-02-09T14:57:00"),
+        waterTimeMinutes: 122,
+        waveCount: 33,
+        distanceMiles: 1.2,
+        longestWaveSeconds: 503,
+        maxSpeed: 18.4,
+        trackData: trackData as any,
+      });
+      console.log("Seeded database with 1 example surf session");
     }
   } catch (error) {
     console.error("Seed error:", error);

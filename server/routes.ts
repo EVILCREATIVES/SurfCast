@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertSurfSpotSchema } from "@shared/schema";
+import { insertSurfSpotSchema, insertSurfSessionSchema } from "@shared/schema";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -497,6 +497,47 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Webcams error:", error);
       res.status(500).json({ error: "Failed to fetch webcams" });
+    }
+  });
+
+  app.get("/api/sessions", async (_req, res) => {
+    try {
+      const sessions = await storage.getAllSessions();
+      res.json(sessions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch sessions" });
+    }
+  });
+
+  app.post("/api/sessions", async (req, res) => {
+    try {
+      const parsed = insertSurfSessionSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.message });
+      }
+      const session = await storage.createSession(parsed.data);
+      res.status(201).json(session);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create session" });
+    }
+  });
+
+  app.get("/api/sessions/:id", async (req, res) => {
+    try {
+      const session = await storage.getSession(req.params.id);
+      if (!session) return res.status(404).json({ error: "Session not found" });
+      res.json(session);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch session" });
+    }
+  });
+
+  app.delete("/api/sessions/:id", async (req, res) => {
+    try {
+      await storage.deleteSession(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete session" });
     }
   });
 

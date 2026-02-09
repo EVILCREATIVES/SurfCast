@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,12 +13,13 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SurfChat } from "@/components/surf-chat";
-import { Waves, ChevronLeft, ChevronRight, MapPin, List, X } from "lucide-react";
+import { Waves, ChevronLeft, ChevronRight, MapPin, List, X, Activity } from "lucide-react";
 import type { SurfSpot, ForecastResponse, InsertSurfSpot } from "@shared/schema";
 
 export default function Home() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [, navigate] = useLocation();
   const [selectedSpot, setSelectedSpot] = useState<SurfSpot | null>(null);
   const [clickedLocation, setClickedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [forecastLocation, setForecastLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -219,7 +221,15 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <Waves className="w-5 h-5 text-primary shrink-0" />
                 <SheetTitle className="text-base font-bold tracking-tight">SurfCast</SheetTitle>
-                <div className="ml-auto">
+                <div className="ml-auto flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => { setSidebarOpen(false); navigate("/sessions"); }}
+                    data-testid="button-sessions-mobile"
+                  >
+                    <Activity className="w-4 h-4" />
+                  </Button>
                   <ThemeToggle />
                 </div>
               </div>
@@ -252,7 +262,15 @@ export default function Home() {
         <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-sidebar-border">
           <Waves className="w-5 h-5 text-primary shrink-0" />
           <h1 className="text-base font-bold tracking-tight truncate">SurfCast</h1>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => navigate("/sessions")}
+              data-testid="button-sessions-desktop"
+            >
+              <Activity className="w-4 h-4" />
+            </Button>
             <ThemeToggle />
           </div>
         </div>
