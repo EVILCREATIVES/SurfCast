@@ -221,7 +221,7 @@ export class WindGL {
   private particleStateResolution: number = 0;
   private numParticles: number = 0;
 
-  fadeOpacity = 0.94;
+  fadeOpacity = 0.996;
   speedFactor = 0.15;
   dropRate = 0.003;
   dropRateBump = 0.01;
@@ -315,19 +315,21 @@ export class WindGL {
   private drawScreen() {
     const gl = this.gl;
 
+    // Step 1: Render faded previous frame + new particles into screenTextures[1]
     bindFramebuffer(gl, this.framebuffer, this.screenTextures[1]);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
+    // Fade pass overwrites the target entirely (no blending needed - full-screen quad)
+    gl.disable(gl.BLEND);
     this.drawFade();
 
+    // Particles blend on top of the faded content
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     this.drawParticles();
     gl.disable(gl.BLEND);
 
+    // Step 2: Draw the composited screen texture to the actual canvas
     bindFramebuffer(gl, null);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -349,6 +351,7 @@ export class WindGL {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.disable(gl.BLEND);
 
+    // Swap screen textures for next frame
     const tmp = this.screenTextures[0];
     this.screenTextures[0] = this.screenTextures[1];
     this.screenTextures[1] = tmp;
@@ -358,9 +361,6 @@ export class WindGL {
     const gl = this.gl;
     const prog = this.fadeProgram;
     gl.useProgram(prog);
-
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     const aPos = gl.getAttribLocation(prog, "a_pos");
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
@@ -372,7 +372,6 @@ export class WindGL {
     gl.uniform1f(gl.getUniformLocation(prog, "u_fade"), this.fadeOpacity);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-    gl.disable(gl.BLEND);
   }
 
   private drawParticles() {
