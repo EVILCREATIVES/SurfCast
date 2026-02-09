@@ -222,46 +222,45 @@ function SessionDetail({ session, onBack, onClose }: { session: SurfSession; onB
       </header>
 
       <div className="flex-1 overflow-auto min-h-0">
-        <div className="relative h-64 sm:h-80">
+        <div className="relative h-48 sm:h-56 shrink-0">
           <SessionMap session={session} interactive={true} highlightWave={highlightWave} />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none" />
         </div>
 
-        <div className="px-4 -mt-6 relative z-10">
+        <div className="px-4 pt-4">
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <Card className="p-3 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-cyan-400/10 flex items-center justify-center shrink-0">
-                <Waves className="w-5 h-5 text-cyan-400" />
+            <Card className="p-3 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-cyan-400/10 flex items-center justify-center shrink-0">
+                <Waves className="w-4 h-4 text-cyan-400" />
               </div>
-              <div>
-                <p className="text-lg font-bold leading-tight" data-testid="text-wave-count">{session.waveCount}</p>
+              <div className="min-w-0">
+                <p className="text-base font-bold leading-tight" data-testid="text-wave-count">{session.waveCount}</p>
                 <p className="text-xs text-muted-foreground">Waves</p>
               </div>
             </Card>
-            <Card className="p-3 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-cyan-400/10 flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5 text-cyan-400" />
+            <Card className="p-3 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-cyan-400/10 flex items-center justify-center shrink-0">
+                <Clock className="w-4 h-4 text-cyan-400" />
               </div>
-              <div>
-                <p className="text-lg font-bold leading-tight">{formatWaterTime(session.waterTimeMinutes)}</p>
+              <div className="min-w-0">
+                <p className="text-base font-bold leading-tight">{formatWaterTime(session.waterTimeMinutes)}</p>
                 <p className="text-xs text-muted-foreground">Water Time</p>
               </div>
             </Card>
-            <Card className="p-3 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-cyan-400/10 flex items-center justify-center shrink-0">
-                <Route className="w-5 h-5 text-cyan-400" />
+            <Card className="p-3 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-cyan-400/10 flex items-center justify-center shrink-0">
+                <Route className="w-4 h-4 text-cyan-400" />
               </div>
-              <div>
-                <p className="text-lg font-bold leading-tight" data-testid="text-distance">{session.distanceMiles} mi</p>
+              <div className="min-w-0">
+                <p className="text-base font-bold leading-tight" data-testid="text-distance">{session.distanceMiles} mi</p>
                 <p className="text-xs text-muted-foreground">Distance</p>
               </div>
             </Card>
-            <Card className="p-3 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-cyan-400/10 flex items-center justify-center shrink-0">
-                <Timer className="w-5 h-5 text-cyan-400" />
+            <Card className="p-3 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-cyan-400/10 flex items-center justify-center shrink-0">
+                <Timer className="w-4 h-4 text-cyan-400" />
               </div>
-              <div>
-                <p className="text-lg font-bold leading-tight" data-testid="text-longest-wave">{formatLongestWave(session.longestWaveSeconds)}</p>
+              <div className="min-w-0">
+                <p className="text-base font-bold leading-tight" data-testid="text-longest-wave">{formatLongestWave(session.longestWaveSeconds)}</p>
                 <p className="text-xs text-muted-foreground">Longest Wave</p>
               </div>
             </Card>
