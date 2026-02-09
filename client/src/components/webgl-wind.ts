@@ -94,7 +94,8 @@ const VERT_DRAW = `
     v_speed = length(velocity) / length(u_wind_max);
 
     vec2 screen_pos = pos * u_scale + u_offset;
-    gl_PointSize = 1.0;
+    float size = mix(1.5, 3.0, v_speed);
+    gl_PointSize = size;
     gl_Position = vec4(screen_pos * 2.0 - 1.0, 0, 1);
   }
 `;
@@ -111,7 +112,7 @@ const FRAG_DRAW = `
     else if (s < 0.7) c = mix(vec3(0.78, 0.9, 0.2), vec3(1.0, 0.75, 0.12), (s - 0.5) / 0.2);
     else if (s < 0.85) c = mix(vec3(1.0, 0.75, 0.12), vec3(1.0, 0.43, 0.12), (s - 0.7) / 0.15);
     else c = mix(vec3(1.0, 0.43, 0.12), vec3(1.0, 0.2, 0.2), (s - 0.85) / 0.15);
-    gl_FragColor = vec4(c, 0.85);
+    gl_FragColor = vec4(c, 0.95);
   }
 `;
 
@@ -222,7 +223,7 @@ export class WindGL {
   private numParticles: number = 0;
 
   fadeOpacity = 0.996;
-  speedFactor = 0.15;
+  speedFactor = 0.25;
   dropRate = 0.003;
   dropRateBump = 0.01;
 
