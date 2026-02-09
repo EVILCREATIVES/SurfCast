@@ -157,15 +157,42 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
   useEffect(() => {
     const container = map.getContainer();
-    let overlay = container.querySelector(".wind-wave-overlay") as HTMLElement | null;
+    const mapPane = container.querySelector(".leaflet-map-pane") as HTMLElement;
+    if (!mapPane) return;
+
+    let overlay = mapPane.querySelector(".wind-wave-overlay") as HTMLElement | null;
     if (!overlay) {
       overlay = document.createElement("div");
       overlay.className = "wind-wave-overlay";
       overlay.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;z-index:450;pointer-events:none;";
-      container.appendChild(overlay);
+
+      const markerPane = mapPane.querySelector(".leaflet-marker-pane");
+      if (markerPane) {
+        mapPane.insertBefore(overlay, markerPane);
+      } else {
+        mapPane.appendChild(overlay);
+      }
     }
     setPortalTarget(overlay);
+
+    const syncTransform = () => {
+      const transform = mapPane.style.transform;
+      if (transform && overlay) {
+        const match = transform.match(/translate3d\(([^,]+),\s*([^,]+)/);
+        if (match) {
+          const tx = parseFloat(match[1]);
+          const ty = parseFloat(match[2]);
+          overlay.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
+        }
+      }
+    };
+
+    const observer = new MutationObserver(syncTransform);
+    observer.observe(mapPane, { attributes: true, attributeFilter: ["style"] });
+    syncTransform();
+
     return () => {
+      observer.disconnect();
       overlay?.remove();
     };
   }, [map]);
