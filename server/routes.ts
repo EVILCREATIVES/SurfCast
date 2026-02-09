@@ -485,10 +485,10 @@ PERSONALITY & STYLE:
       res.write(`data: ${JSON.stringify({ type: "conversation", id: convId })}\n\n`);
 
       const stream = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-5.2-2025-12-11",
         messages: chatMessages,
         stream: true,
-        max_tokens: 400,
+        max_tokens: 600,
       });
 
       let fullResponse = "";
