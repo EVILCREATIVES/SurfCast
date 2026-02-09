@@ -396,7 +396,6 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
     let dirty = false;
     let zoomDirty = false;
-    let prevOrigin = map.getPixelOrigin();
 
     const onMove = () => { dirty = true; };
     const onZoom = () => { dirty = true; zoomDirty = true; };
@@ -414,27 +413,8 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
       if (dirty) {
         syncCanvasSize(canvas);
-        const newOrigin = map.getPixelOrigin();
-        const dx = prevOrigin.x - newOrigin.x;
-        const dy = prevOrigin.y - newOrigin.y;
-
-        if (!zoomDirty && (dx !== 0 || dy !== 0)) {
-          for (const p of particlesRef.current) {
-            p.x += dx;
-            p.y += dy;
-            p.prevX += dx;
-            p.prevY += dy;
-          }
-
-          if (ctx.globalCompositeOperation !== "copy") {
-            const imageData = ctx.getImageData(0, 0, w, h);
-            ctx.clearRect(0, 0, w, h);
-            ctx.putImageData(imageData, dx, dy);
-          }
-        }
-
-        prevOrigin = newOrigin;
         screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
+        ctx.clearRect(0, 0, w, h);
         dirty = false;
       }
 
@@ -456,7 +436,6 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
           }
           zp = newZp;
         }
-        ctx.clearRect(0, 0, w, h);
         zoomDirty = false;
       }
 
