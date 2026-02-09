@@ -13,7 +13,7 @@ import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
 import { Skeleton } from "@/components/ui/skeleton";
 
-function AuthenticatedRouter() {
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -28,13 +28,17 @@ function AuthenticatedRouter() {
     return <Login />;
   }
 
+  return <Component />;
+}
+
+function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/sessions" component={Sessions} />
-      <Route path="/profile" component={Profile} />
-      <Route path="/settings" component={Settings} />
       <Route path="/login" component={Login} />
+      <Route path="/sessions">{() => <ProtectedRoute component={Sessions} />}</Route>
+      <Route path="/profile">{() => <ProtectedRoute component={Profile} />}</Route>
+      <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );
@@ -47,7 +51,7 @@ function App() {
         <TooltipProvider>
           <AuthProvider>
             <Toaster />
-            <AuthenticatedRouter />
+            <Router />
           </AuthProvider>
         </TooltipProvider>
       </QueryClientProvider>

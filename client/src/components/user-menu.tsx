@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,19 +9,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Activity, Settings, LogOut } from "lucide-react";
+import { User, Activity, Settings, LogOut, LogIn } from "lucide-react";
 
 export function UserMenu() {
   const { user, logout } = useAuth();
   const [, navigate] = useLocation();
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate("/login")}
+        data-testid="button-sign-in"
+      >
+        <LogIn className="w-4 h-4 mr-2" />
+        Sign In
+      </Button>
+    );
+  }
 
   const initials = user.username.charAt(0).toUpperCase();
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate("/");
   };
 
   return (

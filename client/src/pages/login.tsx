@@ -67,6 +67,16 @@ export default function Login() {
             {isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
+
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => navigate("/")}
+            className="text-sm text-muted-foreground hover-elevate px-2 py-1 rounded-md"
+            data-testid="button-continue-guest"
+          >
+            Continue without an account
+          </button>
+        </div>
       </Card>
     </div>
   );
