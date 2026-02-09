@@ -290,14 +290,34 @@ export default function Home() {
             Save This Spot
           </Button>
         )}
-      </div>
 
-      <div className="w-80 shrink-0 border-l border-border bg-sidebar overflow-hidden flex flex-col">
-        <ForecastPanel
-          forecast={forecast || null}
-          isLoading={forecastLoading}
-          locationName={locationName}
-        />
+        {forecastLocation && (
+          <div className="absolute top-3 right-14 z-[1000] w-80 max-h-[calc(100vh-24px)] bg-sidebar/95 backdrop-blur-sm border border-border rounded-md overflow-hidden flex flex-col shadow-lg">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
+              <span className="text-sm font-medium truncate">{locationName || "Forecast"}</span>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => {
+                  setForecastLocation(null);
+                  setClickedLocation(null);
+                  setSelectedSpot(null);
+                  setLocationName("");
+                }}
+                data-testid="button-close-forecast"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto">
+              <ForecastPanel
+                forecast={forecast || null}
+                isLoading={forecastLoading}
+                locationName={locationName}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} isMobile={false} hasForecastPanel={false} />
