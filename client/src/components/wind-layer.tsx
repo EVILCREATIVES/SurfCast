@@ -157,13 +157,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
   useEffect(() => {
     const container = map.getContainer();
-    let target = container.closest('[data-testid="map-container"]') as HTMLElement | null;
-    if (!target) {
-      target = container.parentElement;
-    }
-    if (target) {
-      setPortalTarget(target);
-    }
+    setPortalTarget(container);
   }, [map]);
 
   const fetchGridData = useCallback(async () => {
@@ -469,6 +463,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     width: "100%",
     height: "100%",
     pointerEvents: "none",
+    zIndex: 250,
   };
 
   return createPortal(
@@ -476,14 +471,14 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       {showWaves && (
         <canvas
           ref={waveCanvasRef}
-          style={{ ...canvasStyle, zIndex: 399 }}
+          style={canvasStyle}
           data-testid="canvas-waves"
         />
       )}
       {showWind && (
         <canvas
           ref={particleCanvasRef}
-          style={{ ...canvasStyle, zIndex: 400 }}
+          style={{ ...canvasStyle, zIndex: 251 }}
           data-testid="canvas-particles"
         />
       )}

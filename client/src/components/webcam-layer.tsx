@@ -39,17 +39,6 @@ export function WebcamLayer() {
 
   const tooZoomedOut = zoomLevel < MIN_ZOOM_FOR_WEBCAMS;
 
-  useEffect(() => {
-    const pane = map.getPane("markerPane");
-    if (pane) {
-      pane.style.zIndex = "700";
-    }
-    return () => {
-      if (pane) {
-        pane.style.zIndex = "";
-      }
-    };
-  }, [map]);
 
   const fetchWebcams = useCallback(() => {
     if (map.getZoom() < MIN_ZOOM_FOR_WEBCAMS) {
