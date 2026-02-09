@@ -109,30 +109,34 @@ export function WebcamLayer() {
             },
           }}
         >
-          <Popup maxWidth={320} minWidth={240}>
-            <div className="font-sans" data-testid={`webcam-popup-${cam.id}`}>
-              <p className="font-medium text-sm mb-1">{cam.title}</p>
-              <p className="text-xs text-gray-500 mb-2">
-                {[cam.city, cam.country].filter(Boolean).join(", ")}
-              </p>
-              {cam.thumbnail && (
+          <Popup maxWidth={320} minWidth={260} className="webcam-popup">
+            <div className="relative overflow-hidden font-sans" data-testid={`webcam-popup-${cam.id}`} style={{ margin: "-14px -20px -14px -20px" }}>
+              {cam.thumbnail ? (
                 <img
                   src={cam.thumbnail}
                   alt={cam.title}
-                  className="w-full rounded-md mb-2"
-                  style={{ maxHeight: 180, objectFit: "cover" }}
+                  className="w-full block"
+                  style={{ height: 200, objectFit: "cover" }}
                   data-testid={`webcam-thumbnail-${cam.id}`}
                 />
+              ) : (
+                <div className="w-full bg-gray-800" style={{ height: 200 }} />
               )}
+              <div className="absolute bottom-0 left-0 right-0 px-3 py-2" style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.75))" }}>
+                <p className="font-medium text-sm text-white leading-tight">{cam.title}</p>
+                <p className="text-xs text-white/80">
+                  {[cam.city, cam.country].filter(Boolean).join(", ")}
+                </p>
+              </div>
               {cam.player && (
                 <a
                   href={cam.player}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline"
+                  className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded backdrop-blur-sm hover:bg-black/70 transition-colors"
                   data-testid={`webcam-link-${cam.id}`}
                 >
-                  Watch live stream
+                  Live
                 </a>
               )}
             </div>
