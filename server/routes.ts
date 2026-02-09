@@ -489,7 +489,7 @@ export async function registerRoutes(
           lng: cam.location?.longitude,
           city: cam.location?.city,
           country: cam.location?.country,
-          thumbnail: cam.images?.daylight?.preview || cam.images?.current?.preview || cam.images?.daylight?.thumbnail || cam.images?.current?.thumbnail || cam.images?.current?.icon,
+          thumbnail: cam.images?.current?.preview || cam.images?.current?.thumbnail || cam.images?.current?.icon,
           player: cam.player?.lifetime?.day || cam.player?.lifetime?.month || null,
         }));
 
