@@ -172,14 +172,14 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
 
       {showWebcams && currentZoom < MIN_ZOOM_FOR_WEBCAMS && (
         <div
-          className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2 rounded-md bg-black/70 text-white text-sm font-medium backdrop-blur-sm pointer-events-none transition-opacity duration-300"
+          className="absolute top-14 left-1/2 -translate-x-1/2 z-[999] px-4 py-2 rounded-md bg-black/70 text-white text-sm font-medium backdrop-blur-sm pointer-events-none transition-opacity duration-300"
           data-testid="text-zoom-in-webcams"
         >
           Zoom in to see webcams
         </div>
       )}
 
-      <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1">
+      <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1">
         <div className="relative">
           <Button
             size="icon"

@@ -147,7 +147,7 @@ export default function Home() {
             onFlyTo={(fn) => { flyToRef.current = fn; }}
           />
 
-          <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2">
+          <div className="absolute top-4 left-3 z-[1000] flex items-center gap-2" style={{ top: 'max(16px, env(safe-area-inset-top, 16px))' }}>
             <Button
               size="icon"
               variant="secondary"
@@ -162,7 +162,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="absolute top-3 right-3 z-[1001]">
+          <div className="absolute top-4 right-3 z-[1001]" style={{ top: 'max(16px, env(safe-area-inset-top, 16px))' }}>
             <UserMenu />
           </div>
 
