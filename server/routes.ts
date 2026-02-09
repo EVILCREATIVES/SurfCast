@@ -5,8 +5,7 @@ import { insertSurfSpotSchema, insertSurfSessionSchema } from "@shared/schema";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 const gridWeatherCache = new Map<string, { data: any; timestamp: number }>();
@@ -772,7 +771,7 @@ PERSONALITY & STYLE:
       res.write(`data: ${JSON.stringify({ type: "conversation", id: convId })}\n\n`);
 
       const stream = await openai.chat.completions.create({
-        model: "gpt-5.2",
+        model: "gpt-4o",
         messages: chatMessages,
         stream: true,
         max_completion_tokens: 600,
