@@ -107,7 +107,7 @@ export function ForecastPanel({ forecast, isLoading, locationName }: ForecastPan
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-auto">
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
@@ -188,8 +188,8 @@ export function ForecastPanel({ forecast, isLoading, locationName }: ForecastPan
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-        <Tabs defaultValue="hourly" className="flex flex-col flex-1 min-h-0">
+      <div>
+        <Tabs defaultValue="hourly">
           <div className="px-4">
             <TabsList className="w-full">
               <TabsTrigger value="hourly" className="flex-1" data-testid="tab-hourly">
@@ -201,7 +201,7 @@ export function ForecastPanel({ forecast, isLoading, locationName }: ForecastPan
             </TabsList>
           </div>
 
-          <TabsContent value="hourly" className="flex-1 overflow-auto mt-0 px-4 pb-4">
+          <TabsContent value="hourly" className="mt-0 px-4 pb-4">
             <div className="flex gap-1 mb-3 mt-2 overflow-x-auto pb-1">
               {days.slice(0, 7).map((d, i) => (
                 <button
@@ -261,7 +261,7 @@ export function ForecastPanel({ forecast, isLoading, locationName }: ForecastPan
             </div>
           </TabsContent>
 
-          <TabsContent value="daily" className="flex-1 overflow-auto mt-0 px-4 pb-4">
+          <TabsContent value="daily" className="mt-0 px-4 pb-4">
             <div className="space-y-2 mt-2">
               {days.slice(0, 7).map((day, dayIdx) => {
                 const dayHours = [];
