@@ -12,11 +12,13 @@ interface ChatMessage {
 interface SurfChatProps {
   latitude?: number | null;
   longitude?: number | null;
+  locationName?: string | null;
+  forecastData?: any | null;
   isMobile?: boolean;
   hasForecastPanel?: boolean;
 }
 
-export function SurfChat({ latitude, longitude, isMobile, hasForecastPanel }: SurfChatProps) {
+export function SurfChat({ latitude, longitude, locationName, forecastData, isMobile, hasForecastPanel }: SurfChatProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -54,6 +56,8 @@ export function SurfChat({ latitude, longitude, isMobile, hasForecastPanel }: Su
           conversationId,
           latitude: latitude ?? undefined,
           longitude: longitude ?? undefined,
+          locationName: locationName ?? undefined,
+          forecastData: forecastData ?? undefined,
         }),
       });
 
@@ -101,7 +105,7 @@ export function SurfChat({ latitude, longitude, isMobile, hasForecastPanel }: Su
     } finally {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, conversationId, latitude, longitude]);
+  }, [input, isStreaming, conversationId, latitude, longitude, locationName, forecastData]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {

@@ -544,7 +544,7 @@ export async function registerRoutes(
   // AI Surf Chat
   app.post("/api/chat", async (req, res) => {
     try {
-      const { message, conversationId, latitude, longitude } = req.body;
+      const { message, conversationId, latitude, longitude, locationName: clientLocationName, forecastData: clientForecastData } = req.body;
 
       if (!message || typeof message !== "string") {
         return res.status(400).json({ error: "Message is required" });
@@ -568,7 +568,44 @@ export async function registerRoutes(
       ).join("\n");
 
       let forecastContext = "";
-      if (latitude != null && longitude != null && !isNaN(latitude) && !isNaN(longitude)) {
+      let currentViewLocation = clientLocationName || "";
+
+      if (clientForecastData && clientLocationName) {
+        try {
+          const fd = clientForecastData;
+          const w = fd.weather;
+          const m = fd.marine;
+          if (w && m) {
+            const now = new Date();
+            const idx = w.time ? Math.max(0, w.time.findIndex((t: string) => new Date(t) >= now) - 1) : 0;
+            const ci = Math.max(0, idx);
+            const lines = [
+              `Location: ${clientLocationName} (${latitude?.toFixed(2)}, ${longitude?.toFixed(2)})`,
+              `Current conditions the user is viewing on the map:`,
+              `  Wind: ${w.wind_speed_10m?.[ci]?.toFixed(1) ?? "?"} mph from ${w.wind_direction_10m?.[ci] ?? "?"}°, gusts ${w.wind_gusts_10m?.[ci]?.toFixed(1) ?? "?"} mph`,
+              `  Temperature: ${w.temperature_2m?.[ci]?.toFixed(1) ?? "?"}°F`,
+              `  Wave Height: ${m.wave_height?.[ci]?.toFixed(1) ?? "?"} ft`,
+              `  Wave Direction: ${m.wave_direction?.[ci] ?? "?"}°, Period: ${m.wave_period?.[ci]?.toFixed(1) ?? "?"}s`,
+              `  Swell Height: ${m.swell_wave_height?.[ci]?.toFixed(1) ?? "?"} ft`,
+              `  Swell Direction: ${m.swell_wave_direction?.[ci] ?? "?"}°, Period: ${m.swell_wave_period?.[ci]?.toFixed(1) ?? "?"}s`,
+            ];
+            if (w.time && w.time.length > ci + 6) {
+              lines.push(`  Next 6 hours forecast:`);
+              for (let h = 1; h <= 6; h++) {
+                const fi = ci + h;
+                if (fi < w.time.length) {
+                  lines.push(`    ${new Date(w.time[fi]).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}: Wind ${w.wind_speed_10m?.[fi]?.toFixed(0)} mph, Waves ${m.wave_height?.[fi]?.toFixed(1)} ft, Period ${m.wave_period?.[fi]?.toFixed(0)}s`);
+                }
+              }
+            }
+            forecastContext = lines.join("\n");
+          }
+        } catch {
+          // fall back to API fetch
+        }
+      }
+
+      if (!forecastContext && latitude != null && longitude != null && !isNaN(latitude) && !isNaN(longitude)) {
         forecastContext = await fetchForecastForAI(latitude, longitude);
       }
 
@@ -646,7 +683,7 @@ SURF KNOWLEDGE:
 
 SAVED SPOTS: ${spotListText || "None saved yet."}
 
-${forecastContext ? `MAP DATA:\n${forecastContext}\n` : ""}${locationForecasts.length > 0 ? `FORECAST DATA:\n${locationForecasts.join("\n")}` : ""}
+${forecastContext ? `CURRENTLY VIEWING ON MAP (the user has this forecast panel open right now):\n${forecastContext}\n` : ""}${locationForecasts.length > 0 ? `ADDITIONAL FORECAST DATA:\n${locationForecasts.join("\n")}` : ""}
 
 PERSONALITY & STYLE:
 - Be warm, conversational, and enthusiastic — like a surf buddy, not a weather robot.
@@ -660,6 +697,7 @@ PERSONALITY & STYLE:
   * Mention if it's still good for longboarding, SUP, or beginners even if shortboarders would skip it
 - Remember what the user asked earlier in the conversation and build on it. Reference previous topics naturally.
 - ONLY use real numbers from the forecast data above. Never invent conditions.
+- If "CURRENTLY VIEWING ON MAP" data is provided, always reference it when the user asks general questions like "how are conditions?" or "should I go out?" — they're asking about what they see on the map right now.
 - If no forecast data is available, warmly ask them to click a spot on the map or name a specific beach so you can pull real data.
 - Feel free to use surf lingo naturally (lineup, glassy, peaky, barreling, mushy, etc.) but keep it accessible.`;
 

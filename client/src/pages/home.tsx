@@ -235,7 +235,7 @@ export default function Home() {
           </SheetContent>
         </Sheet>
 
-        <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} isMobile={true} hasForecastPanel={!!forecastLocation} />
+        <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} locationName={locationName} forecastData={forecast} isMobile={true} hasForecastPanel={!!forecastLocation} />
 
         <AddSpotDialog
           open={showAddDialog}
@@ -338,7 +338,7 @@ export default function Home() {
         )}
       </div>
 
-      <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} isMobile={false} hasForecastPanel={false} />
+      <SurfChat latitude={forecastLocation?.lat} longitude={forecastLocation?.lng} locationName={locationName} forecastData={forecast} isMobile={false} hasForecastPanel={false} />
 
       <AddSpotDialog
         open={showAddDialog}
