@@ -394,23 +394,17 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     particlesRef.current = Array.from({ length: zp.particleCount }, () => createParticle(cw, ch, zp.maxAge));
     screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
 
-    let projectionDirty = false;
+    let dirty = false;
     let zoomDirty = false;
+    let prevOrigin = map.getPixelOrigin();
 
-    const onMove = () => {
-      projectionDirty = true;
-    };
-    const onZoom = () => {
-      projectionDirty = true;
-      zoomDirty = true;
-    };
+    const onMove = () => { dirty = true; };
+    const onZoom = () => { dirty = true; zoomDirty = true; };
 
     map.on("move", onMove);
     map.on("zoom", onZoom);
     map.on("moveend", onMove);
     map.on("zoomend", onZoom);
-
-    let frameCount = 0;
 
     const animate = () => {
       if (!showWind) return;
@@ -418,10 +412,30 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       const w = canvas.width;
       const h = canvas.height;
 
-      if (projectionDirty) {
+      if (dirty) {
         syncCanvasSize(canvas);
+        const newOrigin = map.getPixelOrigin();
+        const dx = prevOrigin.x - newOrigin.x;
+        const dy = prevOrigin.y - newOrigin.y;
+
+        if (!zoomDirty && (dx !== 0 || dy !== 0)) {
+          for (const p of particlesRef.current) {
+            p.x += dx;
+            p.y += dy;
+            p.prevX += dx;
+            p.prevY += dy;
+          }
+
+          if (ctx.globalCompositeOperation !== "copy") {
+            const imageData = ctx.getImageData(0, 0, w, h);
+            ctx.clearRect(0, 0, w, h);
+            ctx.putImageData(imageData, dx, dy);
+          }
+        }
+
+        prevOrigin = newOrigin;
         screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
-        projectionDirty = false;
+        dirty = false;
       }
 
       if (zoomDirty) {
@@ -442,6 +456,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
           }
           zp = newZp;
         }
+        ctx.clearRect(0, 0, w, h);
         zoomDirty = false;
       }
 
@@ -499,7 +514,6 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         ctx.stroke();
       }
 
-      frameCount++;
       animFrameRef.current = requestAnimationFrame(animate);
     };
 
