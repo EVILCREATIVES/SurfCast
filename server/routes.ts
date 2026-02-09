@@ -262,7 +262,7 @@ export async function registerRoutes(
       forecastCache.set(fKey, { data: response, timestamp: Date.now() });
 
       if (forecastCache.size > 200) {
-        const oldest = [...forecastCache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp);
+        const oldest = Array.from(forecastCache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp);
         for (let i = 0; i < oldest.length - 100; i++) {
           forecastCache.delete(oldest[i][0]);
         }
@@ -375,7 +375,7 @@ export async function registerRoutes(
       gridWeatherCache.set(cacheKey, { data: result, timestamp: Date.now() });
 
       if (gridWeatherCache.size > 100) {
-        const oldest = [...gridWeatherCache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp);
+        const oldest = Array.from(gridWeatherCache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp);
         for (let i = 0; i < oldest.length - 50; i++) {
           gridWeatherCache.delete(oldest[i][0]);
         }
@@ -681,10 +681,10 @@ PERSONALITY & STYLE:
       res.write(`data: ${JSON.stringify({ type: "conversation", id: convId })}\n\n`);
 
       const stream = await openai.chat.completions.create({
-        model: "gpt-5.2-2025-12-11",
+        model: "gpt-5.2",
         messages: chatMessages,
         stream: true,
-        max_tokens: 600,
+        max_completion_tokens: 600,
       });
 
       let fullResponse = "";
