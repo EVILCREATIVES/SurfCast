@@ -143,7 +143,7 @@ export function SurfChat({ latitude, longitude, isMobile, hasForecastPanel }: Su
     );
   };
 
-  const buttonBottom = isMobile && hasForecastPanel ? "bottom-16" : "bottom-4";
+  const chatButtonBottom = isMobile && hasForecastPanel ? 64 : 16;
   const panelPosition = isMobile
     ? "fixed inset-x-2 bottom-2 top-16 z-[1001]"
     : "fixed bottom-4 right-4 z-[1001] w-[360px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-6rem)]";
@@ -153,7 +153,15 @@ export function SurfChat({ latitude, longitude, isMobile, hasForecastPanel }: Su
       {!open && (
         <Button
           size="icon"
-          className={`fixed right-4 ${buttonBottom} z-[1001] h-12 w-12 rounded-full shadow-lg`}
+          className="rounded-full shadow-lg"
+          style={{
+            position: "fixed",
+            right: 16,
+            bottom: chatButtonBottom,
+            zIndex: 1001,
+            width: 48,
+            height: 48,
+          }}
           onClick={() => setOpen(true)}
           data-testid="button-open-chat"
         >
