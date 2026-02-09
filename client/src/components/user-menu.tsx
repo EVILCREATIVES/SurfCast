@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
 import { LogIn } from "lucide-react";
-import surferAvatar from "@assets/images/surfer-avatar.png";
+import surferAvatar from "../assets/images/surfer-avatar.png";
 
 export function UserMenu() {
   const { user } = useAuth();
