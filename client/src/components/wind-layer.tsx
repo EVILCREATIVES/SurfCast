@@ -362,7 +362,6 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     zoomRef.current = map.getZoom();
     let zp = getZoomParams(zoomRef.current);
 
-    const bounds = map.getBounds();
     const createGeoParticle = (maxAge: number): GeoParticle => {
       const b = map.getBounds();
       const lat = b.getSouth() + Math.random() * (b.getNorth() - b.getSouth());
@@ -381,8 +380,6 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     const onZoom = () => { zoomDirty = true; };
     map.on("zoom", onZoom);
     map.on("zoomend", onZoom);
-
-    const MOVE_SPEED = 0.002;
 
     const animate = () => {
       if (!showWind) return;
@@ -413,13 +410,16 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         zoomDirty = false;
       }
 
+      const curBounds = map.getBounds();
+      const latSpan = curBounds.getNorth() - curBounds.getSouth();
+      const moveSpeed = latSpan * 0.0012;
+
       ctx.globalCompositeOperation = "destination-in";
       ctx.fillStyle = `rgba(0, 0, 0, ${zp.trailFade})`;
       ctx.fillRect(0, 0, w, h);
       ctx.globalCompositeOperation = "source-over";
 
       const gpts = pointsRef.current;
-      const curBounds = map.getBounds();
 
       for (const p of particlesRef.current) {
         const wind = interpolateWindGeo(p.lat, p.lng, gpts);
@@ -433,8 +433,9 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
         const mag = Math.sqrt(wind.u * wind.u + wind.v * wind.v);
         if (mag > 0.01) {
-          p.lng += (wind.u / mag) * MOVE_SPEED;
-          p.lat += (wind.v / mag) * MOVE_SPEED;
+          const vel = Math.min(wind.speed * 0.04, 3);
+          p.lng += (wind.u / mag) * moveSpeed * vel;
+          p.lat += (wind.v / mag) * moveSpeed * vel;
         }
         p.age++;
 
@@ -445,9 +446,8 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
           p.lng <= curBounds.getEast() + 2;
 
         if (!inBounds || p.age >= p.maxAge) {
-          const b = curBounds;
-          p.lat = b.getSouth() + Math.random() * (b.getNorth() - b.getSouth());
-          p.lng = b.getWest() + Math.random() * (b.getEast() - b.getWest());
+          p.lat = curBounds.getSouth() + Math.random() * latSpan;
+          p.lng = curBounds.getWest() + Math.random() * (curBounds.getEast() - curBounds.getWest());
           p.prevLat = p.lat;
           p.prevLng = p.lng;
           p.age = 0;
