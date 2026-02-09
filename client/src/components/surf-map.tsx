@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { WindWaveLayer } from "./wind-layer";
 import { WebcamLayer } from "./webcam-layer";
 import { Button } from "@/components/ui/button";
-import { Wind, Waves, Layers, Camera } from "lucide-react";
+import { Wind, Waves, Layers, Video } from "lucide-react";
 import type { SurfSpot } from "@shared/schema";
 
 const MAP_LAYERS = [
@@ -210,7 +210,7 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
           data-testid="button-toggle-webcams"
           title="Toggle beach webcams"
         >
-          <Camera className="w-4 h-4" />
+          <Video className="w-4 h-4" />
         </Button>
       </div>
 
