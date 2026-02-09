@@ -30,9 +30,10 @@ export function setupAuth(app: Express) {
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         httpOnly: true,
-        secure: false,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
       },
+      proxy: process.env.NODE_ENV === "production",
     })
   );
 
