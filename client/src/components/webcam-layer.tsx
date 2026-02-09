@@ -110,7 +110,7 @@ export function WebcamLayer() {
           }}
         >
           <Popup maxWidth={320} minWidth={240} className="webcam-popup">
-            <div className="font-sans" data-testid={`webcam-popup-${cam.id}`} style={{ margin: -1 }}>
+            <div className="font-sans" data-testid={`webcam-popup-${cam.id}`}>
               {cam.thumbnail && (
                 <div className="relative">
                   {cam.player ? (

@@ -326,12 +326,26 @@
   border: none !important;
 }
 
-.webcam-popup .leaflet-popup-content-wrapper {
+.webcam-popup .leaflet-popup-content-wrapper,
+.leaflet-popup.webcam-popup .leaflet-popup-content-wrapper {
   padding: 0 !important;
   overflow: hidden;
+  border-radius: 8px;
 }
 
-.webcam-popup .leaflet-popup-content {
+.webcam-popup .leaflet-popup-content,
+.leaflet-popup.webcam-popup .leaflet-popup-content {
   margin: 0 !important;
-  width: auto !important;
+  min-width: 240px;
+}
+
+.webcam-popup .leaflet-popup-content > div,
+.leaflet-popup.webcam-popup .leaflet-popup-content > div {
+  margin: 0 !important;
+}
+
+.webcam-popup .leaflet-popup-content img,
+.leaflet-popup.webcam-popup .leaflet-popup-content img {
+  display: block;
+  width: 100%;
 }
