@@ -394,39 +394,56 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     particlesRef.current = Array.from({ length: zp.particleCount }, () => createParticle(cw, ch, zp.maxAge));
     screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
 
-    let isMoving = false;
-    let moveTimer: NodeJS.Timeout;
-    const onMoveStart = () => {
-      isMoving = true;
-      clearTimeout(moveTimer);
+    let projectionDirty = false;
+    let zoomDirty = false;
+
+    const onMove = () => {
+      projectionDirty = true;
     };
-    const onMoveEnd = () => {
-      clearTimeout(moveTimer);
-      moveTimer = setTimeout(() => {
-        isMoving = false;
-        zoomRef.current = map.getZoom();
-        zp = getZoomParams(zoomRef.current);
-        syncCanvasSize(canvas);
-        screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
-        particlesRef.current = Array.from({ length: zp.particleCount }, () => createParticle(canvas.width, canvas.height, zp.maxAge));
-      }, 200);
+    const onZoom = () => {
+      projectionDirty = true;
+      zoomDirty = true;
     };
 
-    map.on("movestart", onMoveStart);
-    map.on("zoomstart", onMoveStart);
-    map.on("moveend", onMoveEnd);
-    map.on("zoomend", onMoveEnd);
+    map.on("move", onMove);
+    map.on("zoom", onZoom);
+    map.on("moveend", onMove);
+    map.on("zoomend", onZoom);
+
+    let frameCount = 0;
 
     const animate = () => {
       if (!showWind) return;
 
-      if (isMoving) {
-        animFrameRef.current = requestAnimationFrame(animate);
-        return;
-      }
-
       const w = canvas.width;
       const h = canvas.height;
+
+      if (projectionDirty) {
+        syncCanvasSize(canvas);
+        screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
+        projectionDirty = false;
+      }
+
+      if (zoomDirty) {
+        const newZoom = map.getZoom();
+        if (newZoom !== zoomRef.current) {
+          zoomRef.current = newZoom;
+          const newZp = getZoomParams(newZoom);
+          const targetCount = newZp.particleCount;
+          const currentParticles = particlesRef.current;
+          if (currentParticles.length > targetCount) {
+            particlesRef.current = currentParticles.slice(0, targetCount);
+          } else if (currentParticles.length < targetCount) {
+            const extra = Array.from(
+              { length: targetCount - currentParticles.length },
+              () => createParticle(canvas.width, canvas.height, newZp.maxAge)
+            );
+            particlesRef.current = [...currentParticles, ...extra];
+          }
+          zp = newZp;
+        }
+        zoomDirty = false;
+      }
 
       ctx.globalCompositeOperation = "destination-in";
       ctx.fillStyle = `rgba(0, 0, 0, ${zp.trailFade})`;
@@ -482,6 +499,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         ctx.stroke();
       }
 
+      frameCount++;
       animFrameRef.current = requestAnimationFrame(animate);
     };
 
@@ -489,11 +507,10 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      map.off("movestart", onMoveStart);
-      map.off("zoomstart", onMoveStart);
-      map.off("moveend", onMoveEnd);
-      map.off("zoomend", onMoveEnd);
-      clearTimeout(moveTimer);
+      map.off("move", onMove);
+      map.off("zoom", onZoom);
+      map.off("moveend", onMove);
+      map.off("zoomend", onZoom);
     };
   }, [points, showWind, map, syncCanvasSize]);
 
