@@ -143,7 +143,7 @@ const FRAG_FADE = `
   varying vec2 v_tex_pos;
   void main() {
     vec4 color = texture2D(u_screen, v_tex_pos);
-    gl_FragColor = vec4(floor(color.rgb * u_fade * 255.0) / 255.0, 1.0);
+    gl_FragColor = vec4(floor(color.rgb * u_fade * 255.0) / 255.0, color.a * u_fade);
   }
 `;
 
@@ -318,8 +318,15 @@ export class WindGL {
     bindFramebuffer(gl, this.framebuffer, this.screenTextures[1]);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
     this.drawFade();
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     this.drawParticles();
+    gl.disable(gl.BLEND);
 
     bindFramebuffer(gl, null);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -352,6 +359,9 @@ export class WindGL {
     const prog = this.fadeProgram;
     gl.useProgram(prog);
 
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
     const aPos = gl.getAttribLocation(prog, "a_pos");
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
     gl.enableVertexAttribArray(aPos);
@@ -362,6 +372,7 @@ export class WindGL {
     gl.uniform1f(gl.getUniformLocation(prog, "u_fade"), this.fadeOpacity);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.disable(gl.BLEND);
   }
 
   private drawParticles() {
