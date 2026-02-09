@@ -11,6 +11,7 @@ import Home from "@/pages/home";
 import Sessions from "@/pages/sessions";
 import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
+import AccountMenu from "@/pages/account-menu";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -68,6 +69,7 @@ function Router() {
       <Home />
       <Switch>
         <Route path="/">{() => null}</Route>
+        <Route path="/account">{() => <ProtectedOverlay component={AccountMenu} />}</Route>
         <Route path="/profile">{() => <ProtectedOverlay component={Profile} />}</Route>
         <Route path="/sessions">{() => <ProtectedOverlay component={Sessions} />}</Route>
         <Route path="/settings">{() => <ProtectedOverlay component={Settings} />}</Route>
