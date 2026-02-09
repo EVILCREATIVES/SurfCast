@@ -476,14 +476,14 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       {showWaves && (
         <canvas
           ref={waveCanvasRef}
-          style={{ ...canvasStyle, zIndex: 500 }}
+          style={{ ...canvasStyle, zIndex: 399 }}
           data-testid="canvas-waves"
         />
       )}
       {showWind && (
         <canvas
           ref={particleCanvasRef}
-          style={{ ...canvasStyle, zIndex: 501 }}
+          style={{ ...canvasStyle, zIndex: 400 }}
           data-testid="canvas-particles"
         />
       )}
