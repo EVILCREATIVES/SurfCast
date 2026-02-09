@@ -88,14 +88,26 @@ function seededRandom(seed: number, index: number): number {
   return x - Math.floor(x);
 }
 
+function getMapPaneOffset(map: L.Map): { x: number; y: number } {
+  const container = map.getContainer();
+  const mapPane = container.querySelector(".leaflet-map-pane") as HTMLElement | null;
+  if (!mapPane) return { x: 0, y: 0 };
+  const transform = mapPane.style.transform;
+  if (!transform) return { x: 0, y: 0 };
+  const match = transform.match(/translate3d\(([^,]+),\s*([^,]+)/);
+  if (!match) return { x: 0, y: 0 };
+  return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+}
+
 function projectGridToScreen(points: GridPoint[], map: L.Map): ScreenPoint[] {
+  const offset = getMapPaneOffset(map);
   return points.map((pt) => {
     const pixel = map.latLngToContainerPoint([pt.lat, pt.lng]);
     const rad = (pt.windDir * Math.PI) / 180;
     const knots = pt.windSpeed * 0.5399;
     return {
-      x: pixel.x,
-      y: pixel.y,
+      x: pixel.x - offset.x,
+      y: pixel.y - offset.y,
       u: -Math.sin(rad) * knots,
       v: -Math.cos(rad) * knots,
       speed: knots,
@@ -164,7 +176,9 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     if (!overlay) {
       overlay = document.createElement("div");
       overlay.className = "wind-wave-overlay";
-      overlay.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;z-index:450;pointer-events:none;";
+
+      const rect = container.getBoundingClientRect();
+      overlay.style.cssText = `position:absolute;top:0;left:0;width:${Math.round(rect.width)}px;height:${Math.round(rect.height)}px;pointer-events:none;z-index:450;overflow:hidden;`;
 
       const markerPane = mapPane.querySelector(".leaflet-marker-pane");
       if (markerPane) {
@@ -175,24 +189,23 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     }
     setPortalTarget(overlay);
 
-    const syncTransform = () => {
-      const transform = mapPane.style.transform;
-      if (transform && overlay) {
-        const match = transform.match(/translate3d\(([^,]+),\s*([^,]+)/);
-        if (match) {
-          const tx = parseFloat(match[1]);
-          const ty = parseFloat(match[2]);
-          overlay.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
-        }
-      }
+    const syncOverlaySize = () => {
+      if (!overlay) return;
+      const rect = container.getBoundingClientRect();
+      overlay.style.width = `${Math.round(rect.width)}px`;
+      overlay.style.height = `${Math.round(rect.height)}px`;
+      const offset = getMapPaneOffset(map);
+      overlay.style.left = `${-offset.x}px`;
+      overlay.style.top = `${-offset.y}px`;
     };
 
-    const observer = new MutationObserver(syncTransform);
-    observer.observe(mapPane, { attributes: true, attributeFilter: ["style"] });
-    syncTransform();
+    map.on("move", syncOverlaySize);
+    map.on("resize", syncOverlaySize);
+    syncOverlaySize();
 
     return () => {
-      observer.disconnect();
+      map.off("move", syncOverlaySize);
+      map.off("resize", syncOverlaySize);
       overlay?.remove();
     };
   }, [map]);
@@ -278,6 +291,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
       const elapsed = (timestamp - startTime) / 1000;
       const zoom = map.getZoom();
+      const paneOffset = getMapPaneOffset(map);
 
       for (const pt of points) {
         if (pt.waveHeight === null || pt.waveHeight <= 0) continue;
@@ -290,8 +304,8 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         const ringCount = 2 + Math.floor(seededRandom(hash, 4) * 2);
 
         const pixel = map.latLngToContainerPoint([pt.lat, pt.lng]);
-        const x = pixel.x + offsetX;
-        const y = pixel.y + offsetY;
+        const x = pixel.x - paneOffset.x + offsetX;
+        const y = pixel.y - paneOffset.y + offsetY;
         if (x < -80 || x > canvas.width + 80 || y < -80 || y > canvas.height + 80)
           continue;
 

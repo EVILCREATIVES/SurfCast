@@ -291,6 +291,14 @@
   z-index: 800 !important;
 }
 
+.leaflet-tooltip-pane {
+  z-index: 800 !important;
+}
+
+.wind-wave-overlay {
+  z-index: 450 !important;
+}
+
 .leaflet-popup-content-wrapper {
   background: #fff !important;
   position: relative;
@@ -307,4 +315,8 @@
 
 .dark .leaflet-popup-tip {
   background: #1e293b !important;
+}
+
+.leaflet-popup {
+  z-index: 900 !important;
 }
