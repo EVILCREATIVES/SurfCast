@@ -162,7 +162,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="absolute top-3 right-3 z-[1000]">
+          <div className="absolute top-3 right-3 z-[1001]">
             <UserMenu />
           </div>
 
@@ -287,7 +287,7 @@ export default function Home() {
           </Button>
         </div>
 
-        <div className="absolute top-3 right-3 z-[1000]">
+        <div className="absolute top-3 right-3 z-[1001]">
           <UserMenu />
         </div>
 

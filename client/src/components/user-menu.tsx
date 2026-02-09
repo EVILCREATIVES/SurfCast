@@ -18,8 +18,7 @@ export function UserMenu() {
   if (!user) {
     return (
       <Button
-        variant="ghost"
-        size="sm"
+        variant="default"
         onClick={() => navigate("/login")}
         data-testid="button-sign-in"
       >
