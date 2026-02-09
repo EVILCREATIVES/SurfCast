@@ -123,8 +123,7 @@ export function WebcamLayer() {
                 <div className="w-full bg-gray-800" style={{ height: 200 }} />
               )}
               <div className="absolute bottom-0 left-0 right-0 px-3 py-2" style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.75))" }}>
-                <p className="font-medium text-sm text-white leading-tight">{cam.title}</p>
-                <p className="text-xs text-white/80">
+                <p className="font-medium text-sm text-white leading-tight">
                   {[cam.city, cam.country].filter(Boolean).join(", ")}
                 </p>
               </div>
