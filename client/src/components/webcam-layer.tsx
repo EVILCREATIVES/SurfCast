@@ -119,7 +119,7 @@ export function WebcamLayer() {
                         src={cam.thumbnail}
                         alt={cam.title}
                         className="w-full block"
-                        style={{ maxHeight: 280, objectFit: "cover", borderRadius: "inherit" }}
+                        style={{ objectFit: "cover" }}
                         data-testid={`webcam-thumbnail-${cam.id}`}
                       />
                     </a>
@@ -128,7 +128,7 @@ export function WebcamLayer() {
                       src={cam.thumbnail}
                       alt={cam.title}
                       className="w-full block"
-                      style={{ maxHeight: 280, objectFit: "cover", borderRadius: "inherit" }}
+                      style={{ objectFit: "cover" }}
                       data-testid={`webcam-thumbnail-${cam.id}`}
                     />
                   )}
