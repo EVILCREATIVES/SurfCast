@@ -403,13 +403,31 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     const onMoveEnd = () => {
       moveTimer = setTimeout(() => {
         isMoving = false;
+        const prevZoom = zoomRef.current;
         zoomRef.current = map.getZoom();
-        zp = getZoomParams(zoomRef.current);
+        const newZp = getZoomParams(zoomRef.current);
         syncCanvasSize(canvas);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
         screenPointsRef.current = projectGridToScreen(pointsRef.current, map);
-        particlesRef.current = Array.from({ length: zp.particleCount }, () => createParticle(canvas.width, canvas.height, zp.maxAge));
-      }, 200);
+
+        const currentParticles = particlesRef.current;
+        const targetCount = newZp.particleCount;
+
+        if (currentParticles.length > targetCount) {
+          particlesRef.current = currentParticles.slice(0, targetCount);
+        } else if (currentParticles.length < targetCount) {
+          const extra = Array.from(
+            { length: targetCount - currentParticles.length },
+            () => createParticle(canvas.width, canvas.height, newZp.maxAge)
+          );
+          particlesRef.current = [...currentParticles, ...extra];
+        }
+
+        for (const p of particlesRef.current) {
+          p.maxAge = newZp.maxAge + Math.floor(Math.random() * 40);
+        }
+
+        zp = newZp;
+      }, 150);
     };
 
     map.on("movestart", onMoveStart);
@@ -421,7 +439,12 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       if (!showWind) return;
 
       if (isMoving) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.globalCompositeOperation = "destination-in";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = "source-over";
         animFrameRef.current = requestAnimationFrame(animate);
         return;
       }
