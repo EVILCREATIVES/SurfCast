@@ -47,7 +47,8 @@ function getZoomParams(zoom: number) {
   const trailFade = Math.min(0.96, 0.92 + ease * 0.04);
   const maxAge = Math.round(120 * (1 + ease * 0.8));
   const lineWidth = Math.max(0.5, 1.0 - ease * 0.5);
-  return { particleCount, speedScale, trailFade, maxAge, lineWidth };
+  const interpRadius = 2000 + Math.round(delta * delta * 500);
+  return { particleCount, speedScale, trailFade, maxAge, lineWidth, interpRadius };
 }
 
 function getWindColor(speed: number, alpha: number): string {
@@ -91,7 +92,8 @@ function projectGridToScreen(points: GridPoint[], map: L.Map): ScreenPoint[] {
 function interpolateWind(
   x: number,
   y: number,
-  screenPoints: ScreenPoint[]
+  screenPoints: ScreenPoint[],
+  maxDist: number = 2000
 ): { u: number; v: number; speed: number } | null {
   if (screenPoints.length === 0) return null;
 
@@ -99,7 +101,7 @@ function interpolateWind(
   let u = 0;
   let v = 0;
   let speed = 0;
-  const maxDistSq = 2000 * 2000;
+  const maxDistSq = maxDist * maxDist;
 
   for (const sp of screenPoints) {
     const dx = x - sp.x;
@@ -366,7 +368,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       const maxVel = 3;
 
       for (const p of particlesRef.current) {
-        const wind = interpolateWind(p.x, p.y, spts);
+        const wind = interpolateWind(p.x, p.y, spts, zp.interpRadius);
         if (!wind || wind.speed < 0.1) {
           p.age = p.maxAge;
           continue;
