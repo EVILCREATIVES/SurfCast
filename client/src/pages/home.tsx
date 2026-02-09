@@ -13,7 +13,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SurfChat } from "@/components/surf-chat";
-import { Waves, ChevronLeft, ChevronRight, MapPin, List, X, Activity } from "lucide-react";
+import { UserMenu } from "@/components/user-menu";
+import { Waves, ChevronLeft, ChevronRight, MapPin, List, X } from "lucide-react";
 import type { SurfSpot, ForecastResponse, InsertSurfSpot } from "@shared/schema";
 
 export default function Home() {
@@ -161,6 +162,10 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="absolute top-3 right-3 z-[1000]">
+            <UserMenu />
+          </div>
+
           {clickedLocation && (
             <Button
               variant="default"
@@ -222,14 +227,6 @@ export default function Home() {
                 <Waves className="w-5 h-5 text-primary shrink-0" />
                 <SheetTitle className="text-base font-bold tracking-tight">SurfCast</SheetTitle>
                 <div className="ml-auto flex items-center gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => { setSidebarOpen(false); navigate("/sessions"); }}
-                    data-testid="button-sessions-mobile"
-                  >
-                    <Activity className="w-4 h-4" />
-                  </Button>
                   <ThemeToggle />
                 </div>
               </div>
@@ -279,7 +276,7 @@ export default function Home() {
           onFlyTo={(fn) => { flyToRef.current = fn; }}
         />
 
-        <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2">
+        <div className="absolute top-3 left-3 z-[1000]">
           <Button
             size="icon"
             variant="secondary"
@@ -288,14 +285,10 @@ export default function Home() {
           >
             {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => navigate("/sessions")}
-            data-testid="button-sessions-desktop"
-          >
-            <Activity className="w-4 h-4 mr-1.5" />
-            Your Sessions
-          </Button>
+        </div>
+
+        <div className="absolute top-3 right-3 z-[1000]">
+          <UserMenu />
         </div>
 
         {clickedLocation && (
@@ -311,7 +304,7 @@ export default function Home() {
         )}
 
         {forecastLocation && (
-          <div className="absolute top-3 right-14 z-[1000] w-80 max-h-[calc(100vh-24px)] bg-sidebar/95 backdrop-blur-sm border border-border rounded-md overflow-hidden flex flex-col shadow-lg">
+          <div className="absolute top-14 right-3 z-[1000] w-80 max-h-[calc(100vh-68px)] bg-sidebar/95 backdrop-blur-sm border border-border rounded-md overflow-hidden flex flex-col shadow-lg">
             <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
               <span className="text-sm font-medium truncate">{locationName || "Forecast"}</span>
               <Button

@@ -22,25 +22,41 @@ client/src/
     search-location.tsx - Nominatim geocoding search
     theme-provider.tsx  - Dark/light mode context
     theme-toggle.tsx    - Theme toggle button
+    user-menu.tsx       - Avatar dropdown: Profile, Sessions, Settings, Logout
   pages/
-    home.tsx            - Main layout page
+    home.tsx            - Main layout page (map + overlays)
+    login.tsx           - Login page
+    profile.tsx         - User profile page
     sessions.tsx        - Dawn Patrol-style surf sessions page with GPS track map
+    settings.tsx        - Device connections (Apple Watch, Garmin, Strava, etc.)
   lib/
+    auth.tsx            - Auth context provider + useAuth hook
     weather-utils.ts    - Wind/wave formatting utilities
     queryClient.ts      - TanStack Query config
 
 server/
   index.ts    - Express server entry
+  auth.ts     - Passport + express-session auth setup
   routes.ts   - API routes (/api/spots, /api/forecast/:lat/:lng, /api/sessions)
   storage.ts  - Database CRUD interface
-  db.ts       - Drizzle/pg pool setup
-  seed.ts     - Seeds default surf spots + example session
+  db.ts       - Drizzle/pg pool setup + pool export
+  seed.ts     - Seeds default surf spots + example session + test user
 
 shared/
-  schema.ts   - Drizzle schema + TypeScript types (surfSpots, surfSessions, conversations, messages)
+  schema.ts   - Drizzle schema + TypeScript types (users, surfSpots, surfSessions, conversations, messages)
 ```
 
+## Authentication
+- Passport.js with local strategy + express-session + connect-pg-simple session store
+- Test account: username `1234@surfcast`, password `onlywater`
+- Auth routes: POST /api/auth/login, POST /api/auth/logout, GET /api/auth/me
+- Frontend: AuthProvider wraps app, shows login page when unauthenticated
+- Avatar dropdown menu on home page provides navigation to Profile, Sessions, Settings, and Logout
+
 ## Key APIs
+- `POST /api/auth/login` - Login with username/password
+- `POST /api/auth/logout` - Logout
+- `GET /api/auth/me` - Get current user (401 if not logged in)
 - `GET /api/spots` - List all saved surf spots
 - `POST /api/spots` - Create a new spot
 - `DELETE /api/spots/:id` - Delete a spot

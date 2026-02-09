@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { surfSpots, surfSessions } from "@shared/schema";
+import { surfSpots, surfSessions, users } from "@shared/schema";
 import type { SessionTrackData } from "@shared/schema";
 
 const defaultSpots = [
@@ -136,6 +136,15 @@ export async function seedDatabase() {
       }
       await db.insert(surfSpots).values(defaultSpots);
       console.log(`Seeded database with ${defaultSpots.length} surf spots`);
+    }
+
+    const existingUsers = await db.select().from(users);
+    if (existingUsers.length === 0) {
+      await db.insert(users).values({
+        username: "1234@surfcast",
+        password: "onlywater",
+      });
+      console.log("Seeded test user account");
     }
 
     const existingSessions = await db.select().from(surfSessions);
