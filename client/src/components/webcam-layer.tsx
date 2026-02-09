@@ -109,7 +109,7 @@ export function WebcamLayer() {
             },
           }}
         >
-          <Popup maxWidth={320} minWidth={240} className="webcam-popup">
+          <Popup maxWidth={420} minWidth={320} className="webcam-popup">
             <div className="font-sans" data-testid={`webcam-popup-${cam.id}`} style={{ margin: -1 }}>
               {cam.thumbnail && (
                 <div className="relative">
@@ -119,7 +119,7 @@ export function WebcamLayer() {
                         src={cam.thumbnail}
                         alt={cam.title}
                         className="w-full block"
-                        style={{ maxHeight: 200, objectFit: "cover", borderRadius: "inherit" }}
+                        style={{ maxHeight: 280, objectFit: "cover", borderRadius: "inherit" }}
                         data-testid={`webcam-thumbnail-${cam.id}`}
                       />
                     </a>
@@ -128,7 +128,7 @@ export function WebcamLayer() {
                       src={cam.thumbnail}
                       alt={cam.title}
                       className="w-full block"
-                      style={{ maxHeight: 200, objectFit: "cover", borderRadius: "inherit" }}
+                      style={{ maxHeight: 280, objectFit: "cover", borderRadius: "inherit" }}
                       data-testid={`webcam-thumbnail-${cam.id}`}
                     />
                   )}
