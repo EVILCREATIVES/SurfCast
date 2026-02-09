@@ -85,7 +85,7 @@ function FlyToHandler({ onFlyTo }: { onFlyTo?: (fn: (lat: number, lng: number) =
 export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, onMapClick, onFlyTo }: SurfMapProps) {
   const [showWind, setShowWind] = useState(true);
   const [showWaves, setShowWaves] = useState(true);
-  const [layerIdx, setLayerIdx] = useState(0);
+  const [layerIdx, setLayerIdx] = useState(1);
   const [showLayerPicker, setShowLayerPicker] = useState(false);
   const activeLayer = MAP_LAYERS[layerIdx];
 
