@@ -32,7 +32,7 @@ export function UserMenu() {
         <LoginDialog
           open={showLogin}
           onClose={() => setShowLogin(false)}
-          onDemoSuccess={() => navigate("/profile")}
+          onLoginSuccess={() => navigate("/profile")}
         />
       </>
     );
