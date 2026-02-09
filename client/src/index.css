@@ -311,20 +311,11 @@
 
 .webcam-popup .leaflet-popup-content-wrapper {
   padding: 0 !important;
-  border-radius: 0 !important;
+  border-radius: 8px !important;
   overflow: hidden;
-  box-shadow: none !important;
 }
 
 .webcam-popup .leaflet-popup-content {
   margin: 0 !important;
   width: 100% !important;
-}
-
-.webcam-popup.leaflet-popup {
-  box-shadow: none !important;
-}
-
-.webcam-popup .leaflet-popup-close-button {
-  z-index: 2;
 }
