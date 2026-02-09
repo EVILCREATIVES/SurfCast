@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import { MapContainer, TileLayer, Polyline, CircleMarker } from "react-leaflet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -223,7 +222,7 @@ function SessionDetail({ session, onBack }: { session: SurfSession; onBack: () =
     : 0;
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col bg-background max-h-[90vh]">
       <header className="flex items-center gap-3 px-4 py-3 border-b border-border shrink-0">
         <Button size="icon" variant="ghost" onClick={onBack} data-testid="button-back-sessions">
           <ArrowLeft className="w-4 h-4" />
@@ -326,7 +325,6 @@ function SessionDetail({ session, onBack }: { session: SurfSession; onBack: () =
 }
 
 export default function Sessions() {
-  const [, navigate] = useLocation();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const { data: sessions = [], isLoading } = useQuery<SurfSession[]>({
@@ -337,18 +335,15 @@ export default function Sessions() {
 
   if (selectedSession) {
     return (
-      <div className="h-screen w-full">
+      <div className="w-full max-h-[90vh]">
         <SessionDetail session={selectedSession} onBack={() => setSelectedSessionId(null)} />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen w-full bg-background">
+    <div className="flex flex-col w-full bg-background max-h-[90vh]">
       <header className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-        <Button size="icon" variant="ghost" onClick={() => navigate("/")} data-testid="button-back-home">
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
         <Waves className="w-5 h-5 text-primary shrink-0" />
         <h1 className="text-base font-bold">Your Sessions</h1>
       </header>

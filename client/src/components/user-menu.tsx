@@ -29,7 +29,11 @@ export function UserMenu() {
           <LogIn className="w-4 h-4 mr-2" />
           Sign In
         </Button>
-        <LoginDialog open={showLogin} onClose={() => setShowLogin(false)} />
+        <LoginDialog
+          open={showLogin}
+          onClose={() => setShowLogin(false)}
+          onDemoSuccess={() => navigate("/profile")}
+        />
       </>
     );
   }

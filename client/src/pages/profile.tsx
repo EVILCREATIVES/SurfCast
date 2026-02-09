@@ -1,24 +1,18 @@
-import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, User, Mail, Calendar, Waves } from "lucide-react";
+import { User, Mail, Calendar, Waves } from "lucide-react";
 
 export default function Profile() {
   const { user } = useAuth();
-  const [, navigate] = useLocation();
 
   if (!user) return null;
 
   const initials = user.username.charAt(0).toUpperCase();
 
   return (
-    <div className="flex flex-col h-screen w-full bg-background">
+    <div className="flex flex-col w-full bg-background max-h-[90vh]">
       <header className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-        <Button size="icon" variant="ghost" onClick={() => navigate("/")} data-testid="button-back-home">
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
         <User className="w-5 h-5 text-primary shrink-0" />
         <h1 className="text-base font-bold">Profile</h1>
       </header>

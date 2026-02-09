@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -12,48 +11,69 @@ import Home from "@/pages/home";
 import Sessions from "@/pages/sessions";
 import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
-import { Skeleton } from "@/components/ui/skeleton";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function PageOverlay({ children }: { children: React.ReactNode }) {
+  const [, navigate] = useLocation();
+
+  return (
+    <div className="fixed inset-0 z-[1500] flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={() => navigate("/")}
+        data-testid="overlay-backdrop"
+      />
+      <div className="relative z-10 w-full max-w-lg mx-4 max-h-[90vh] rounded-md overflow-hidden shadow-2xl border border-border">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-2 right-2 z-20"
+          onClick={() => navigate("/")}
+          data-testid="button-close-overlay"
+        >
+          <X className="w-4 h-4" />
+        </Button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ProtectedOverlay({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
   const [, navigate] = useLocation();
-  const [showLogin, setShowLogin] = useState(!isLoading && !user);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="w-12 h-12 rounded-full" />
-      </div>
-    );
-  }
+  if (isLoading) return null;
 
   if (!user) {
     return (
-      <>
-        <Home />
-        <LoginDialog
-          open={showLogin}
-          onClose={() => {
-            setShowLogin(false);
-            navigate("/");
-          }}
-        />
-      </>
+      <LoginDialog
+        open={true}
+        onClose={() => navigate("/")}
+      />
     );
   }
 
-  return <Component />;
+  return (
+    <PageOverlay>
+      <Component />
+    </PageOverlay>
+  );
 }
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/sessions">{() => <ProtectedRoute component={Sessions} />}</Route>
-      <Route path="/profile">{() => <ProtectedRoute component={Profile} />}</Route>
-      <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Home />
+      <Switch>
+        <Route path="/">{() => null}</Route>
+        <Route path="/profile">{() => <ProtectedOverlay component={Profile} />}</Route>
+        <Route path="/sessions">{() => <ProtectedOverlay component={Sessions} />}</Route>
+        <Route path="/settings">{() => <ProtectedOverlay component={Settings} />}</Route>
+        <Route component={NotFound} />
+      </Switch>
+    </>
   );
 }
 

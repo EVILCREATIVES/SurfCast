@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Settings as SettingsIcon, Watch, Activity, Heart, Bike, Bluetooth, ChevronRight } from "lucide-react";
+import { Settings as SettingsIcon, Watch, Activity, Heart, Bike, Bluetooth } from "lucide-react";
 
 interface DeviceConnection {
   name: string;
@@ -81,14 +80,9 @@ function DeviceRow({ device }: { device: DeviceConnection }) {
 }
 
 export default function Settings() {
-  const [, navigate] = useLocation();
-
   return (
-    <div className="flex flex-col h-screen w-full bg-background">
+    <div className="flex flex-col w-full bg-background max-h-[90vh]">
       <header className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-        <Button size="icon" variant="ghost" onClick={() => navigate("/")} data-testid="button-back-home">
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
         <SettingsIcon className="w-5 h-5 text-primary shrink-0" />
         <h1 className="text-base font-bold">Settings</h1>
       </header>

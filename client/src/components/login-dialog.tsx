@@ -10,9 +10,10 @@ import { Waves, X } from "lucide-react";
 interface LoginDialogProps {
   open: boolean;
   onClose: () => void;
+  onDemoSuccess?: () => void;
 }
 
-export function LoginDialog({ open, onClose }: LoginDialogProps) {
+export function LoginDialog({ open, onClose, onDemoSuccess }: LoginDialogProps) {
   const { login } = useAuth();
   const { toast } = useToast();
   const [username, setUsername] = useState("");
@@ -40,6 +41,9 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
     try {
       await login("1234@surfcast", "onlywater");
       onClose();
+      if (onDemoSuccess) {
+        onDemoSuccess();
+      }
     } catch {
       toast({ title: "Demo login failed", description: "Please try again", variant: "destructive" });
     } finally {
