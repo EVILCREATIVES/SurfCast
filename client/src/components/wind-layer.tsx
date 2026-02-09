@@ -74,6 +74,20 @@ function getWaveRingColor(height: number): { r: number; g: number; b: number } {
   return { r: 240, g: 50, b: 100 };
 }
 
+function seedHash(lat: number, lng: number): number {
+  let h = 0;
+  const s = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return h;
+}
+
+function seededRandom(seed: number, index: number): number {
+  let x = Math.sin(seed * 9301 + index * 49297 + 233280) * 49297;
+  return x - Math.floor(x);
+}
+
 function projectGridToScreen(points: GridPoint[], map: L.Map): ScreenPoint[] {
   return points.map((pt) => {
     const pixel = map.latLngToContainerPoint([pt.lat, pt.lng]);
@@ -232,45 +246,58 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const elapsed = (timestamp - startTime) / 1000;
+      const zoom = map.getZoom();
 
       for (const pt of points) {
         if (pt.waveHeight === null || pt.waveHeight <= 0) continue;
+
+        const hash = seedHash(pt.lat, pt.lng);
+        const offsetX = (seededRandom(hash, 0) - 0.5) * 40;
+        const offsetY = (seededRandom(hash, 1) - 0.5) * 40;
+        const sizeVar = 0.7 + seededRandom(hash, 2) * 0.6;
+        const phaseOffset = seededRandom(hash, 3);
+        const ringCount = 2 + Math.floor(seededRandom(hash, 4) * 2);
+
         const pixel = map.latLngToContainerPoint([pt.lat, pt.lng]);
-        const x = pixel.x;
-        const y = pixel.y;
-        if (x < -60 || x > canvas.width + 60 || y < -60 || y > canvas.height + 60)
+        const x = pixel.x + offsetX;
+        const y = pixel.y + offsetY;
+        if (x < -80 || x > canvas.width + 80 || y < -80 || y > canvas.height + 80)
           continue;
 
         const col = getWaveRingColor(pt.waveHeight);
         const period = pt.wavePeriod || 8;
-        const phase = ((elapsed / (period * 0.3)) % 1 + 1) % 1;
-        const maxR = 18 + Math.min(pt.waveHeight * 4, 16);
+        const speed = period * 0.35;
+        const phase = ((elapsed / speed + phaseOffset) % 1 + 1) % 1;
+        const maxR = (14 + Math.min(pt.waveHeight * 5, 20)) * sizeVar;
 
-        for (let ring = 0; ring < 3; ring++) {
-          const ringPhase = ((phase + ring * 0.33) % 1 + 1) % 1;
+        const waveDir = pt.waveDir != null ? (pt.waveDir * Math.PI) / 180 : null;
+
+        for (let ring = 0; ring < ringCount; ring++) {
+          const ringPhase = ((phase + ring / ringCount) % 1 + 1) % 1;
           const r = Math.max(0, ringPhase * maxR);
-          const ringAlpha = (1 - ringPhase) * 0.5;
+          const ringAlpha = (1 - ringPhase) * 0.45;
 
-          if (ringAlpha < 0.02) continue;
+          if (ringAlpha < 0.02 || r < 1) continue;
 
           ctx.beginPath();
-          ctx.arc(x, y, r, 0, Math.PI * 2);
+          if (waveDir !== null) {
+            const arcSpan = Math.PI * (0.6 + seededRandom(hash, 5 + ring) * 0.3);
+            const startAngle = waveDir - arcSpan / 2;
+            const endAngle = waveDir + arcSpan / 2;
+            ctx.arc(x, y, r, startAngle, endAngle);
+          } else {
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+          }
           ctx.strokeStyle = `rgba(${col.r}, ${col.g}, ${col.b}, ${ringAlpha})`;
-          ctx.lineWidth = 1.5 + (1 - ringPhase) * 1.5;
+          ctx.lineWidth = 1.2 + (1 - ringPhase) * 1.8;
           ctx.stroke();
         }
-
-        const centerAlpha = 0.3 + Math.sin(elapsed * 1.5) * 0.1;
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${col.r}, ${col.g}, ${col.b}, ${centerAlpha})`;
-        ctx.fill();
 
         const ft = (pt.waveHeight * 3.28).toFixed(1);
         ctx.font = "bold 9px Inter, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillStyle = `rgba(${col.r}, ${col.g}, ${col.b}, 0.9)`;
-        ctx.fillText(`${ft}ft`, x, y + maxR + 12);
+        ctx.fillStyle = `rgba(${col.r}, ${col.g}, ${col.b}, 0.85)`;
+        ctx.fillText(`${ft}ft`, x, y + maxR + 10);
       }
 
       waveAnimFrameRef.current = requestAnimationFrame(drawWaves);
