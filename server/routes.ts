@@ -369,20 +369,44 @@ export async function registerRoutes(
       const lngDist = (e2 - w) * 111 * Math.cos(centerLat * Math.PI / 180);
       const radius = Math.min(250, Math.max(10, Math.ceil(Math.sqrt(latDist * latDist + lngDist * lngDist) / 2)));
 
-      const url = `https://api.windy.com/webcams/api/v3/webcams?nearby=${centerLat},${centerLng},${radius}&category=beach&include=images,location,player&limit=50&lang=en`;
+      const BEACH_CATEGORIES = new Set(["beach", "coast"]);
+      const beachWebcams: any[] = [];
+      const PAGE_SIZE = 50;
+      const MAX_PAGES = 20;
+      let offset = 0;
+      let totalFromApi = Infinity;
 
-      const response = await fetch(url, {
-        headers: { "x-windy-api-key": apiKey },
-      });
+      for (let page = 0; page < MAX_PAGES && offset < totalFromApi && beachWebcams.length < 30; page++) {
+        const url = `https://api.windy.com/webcams/api/v3/webcams?nearby=${centerLat},${centerLng},${radius}&include=images,location,player,categories&limit=${PAGE_SIZE}&offset=${offset}&lang=en`;
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Windy API error:", response.status, errText);
-        return res.status(502).json({ error: "Webcam API error" });
+        const response = await fetch(url, {
+          headers: { "x-windy-api-key": apiKey },
+        });
+
+        if (!response.ok) {
+          if (page === 0) {
+            const errText = await response.text();
+            console.error("Windy API error:", response.status, errText);
+            return res.status(502).json({ error: "Webcam API error" });
+          }
+          break;
+        }
+
+        const data = await response.json();
+        totalFromApi = data.total || 0;
+
+        for (const cam of (data.webcams || [])) {
+          const cats = cam.categories || [];
+          if (cats.some((c: any) => BEACH_CATEGORIES.has(c.id))) {
+            beachWebcams.push(cam);
+          }
+        }
+
+        offset += PAGE_SIZE;
+        if ((data.webcams || []).length < PAGE_SIZE) break;
       }
 
-      const data = await response.json();
-      const webcams = (data.webcams || [])
+      const webcams = beachWebcams
         .map((cam: any) => ({
           id: cam.webcamId,
           title: cam.title,
