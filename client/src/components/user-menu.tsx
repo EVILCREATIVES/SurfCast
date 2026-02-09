@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
 import { LogIn } from "lucide-react";
@@ -35,12 +35,12 @@ export function UserMenu() {
 
   return (
     <button
-      className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-lg"
       onClick={() => navigate("/account")}
       data-testid="button-user-menu"
     >
-      <Avatar className="w-8 h-8 cursor-pointer">
-        <AvatarFallback className="text-xs bg-primary/10 text-primary">{initials}</AvatarFallback>
+      <Avatar className="w-10 h-10 cursor-pointer ring-2 ring-white/80 dark:ring-white/60">
+        <AvatarFallback className="text-sm font-bold bg-primary text-primary-foreground">{initials}</AvatarFallback>
       </Avatar>
     </button>
   );

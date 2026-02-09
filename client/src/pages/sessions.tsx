@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { MapContainer, TileLayer, Polyline, CircleMarker } from "react-leaflet";
+import { MapContainer, TileLayer, Polyline } from "react-leaflet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -98,29 +98,13 @@ function SessionMap({ session, interactive = false, highlightWave }: { session: 
             positions={wavePositions}
             pathOptions={{
               color: isHighlighted ? "#ffeb3b" : "#00e5ff",
-              weight: isHighlighted ? 4 : 3,
-              opacity: isAnyHighlighted ? (isHighlighted ? 1 : 0.2) : 0.85,
+              weight: isHighlighted ? 4 : 2.5,
+              opacity: isAnyHighlighted ? (isHighlighted ? 1 : 0.15) : 0.8,
+              lineCap: "round",
+              lineJoin: "round",
             }}
           />
         );
-      })}
-
-      {trackData.waves?.map((wave, i) => {
-        const isHighlighted = highlightWave === i;
-        const isAnyHighlighted = highlightWave !== null && highlightWave !== undefined;
-        return wave.points.map((p, j) => (
-          <CircleMarker
-            key={`dot-${i}-${j}`}
-            center={[p.lat, p.lng]}
-            radius={isHighlighted ? 3.5 : 2.5}
-            pathOptions={{
-              color: isHighlighted ? "#ffeb3b" : "#00e5ff",
-              fillColor: isHighlighted ? "#ffeb3b" : "#00e5ff",
-              fillOpacity: isAnyHighlighted ? (isHighlighted ? 1 : 0.15) : 1,
-              weight: 0,
-            }}
-          />
-        ));
       })}
     </MapContainer>
   );

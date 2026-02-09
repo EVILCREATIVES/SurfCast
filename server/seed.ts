@@ -45,8 +45,6 @@ const defaultSpots = [
 function generateSilverStrandSession(): SessionTrackData {
   const baseLat = 32.6305;
   const baseLng = -117.1420;
-  const jettyLat = 32.6290;
-  const jettyLng = -117.1435;
 
   const paddlePath: { lat: number; lng: number; time: number }[] = [];
   const waves: { points: { lat: number; lng: number; time: number; speed?: number }[] }[] = [];
@@ -54,73 +52,49 @@ function generateSilverStrandSession(): SessionTrackData {
   let t = 0;
   const addPaddle = (lat: number, lng: number) => {
     paddlePath.push({ lat, lng, time: t });
-    t += 15;
+    t += 20;
   };
 
   addPaddle(baseLat, baseLng);
-  addPaddle(baseLat + 0.0005, baseLng - 0.0003);
-  addPaddle(baseLat + 0.0012, baseLng - 0.0007);
-  addPaddle(baseLat + 0.0018, baseLng - 0.0010);
-  addPaddle(baseLat + 0.0025, baseLng - 0.0008);
+  addPaddle(baseLat + 0.0004, baseLng - 0.0002);
+  addPaddle(baseLat + 0.0010, baseLng - 0.0006);
+  addPaddle(baseLat + 0.0016, baseLng - 0.0009);
+  addPaddle(baseLat + 0.0022, baseLng - 0.0007);
+  addPaddle(baseLat + 0.0028, baseLng - 0.0005);
 
-  const waveStarts = [
-    { lat: baseLat + 0.0028, lng: baseLng - 0.0006 },
-    { lat: baseLat + 0.0030, lng: baseLng - 0.0009 },
-    { lat: baseLat + 0.0026, lng: baseLng - 0.0004 },
-    { lat: baseLat + 0.0032, lng: baseLng - 0.0011 },
-    { lat: baseLat + 0.0027, lng: baseLng - 0.0007 },
-    { lat: baseLat + 0.0031, lng: baseLng - 0.0005 },
-    { lat: baseLat + 0.0029, lng: baseLng - 0.0008 },
-    { lat: baseLat + 0.0033, lng: baseLng - 0.0010 },
-    { lat: baseLat + 0.0025, lng: baseLng - 0.0006 },
-    { lat: baseLat + 0.0034, lng: baseLng - 0.0012 },
-    { lat: baseLat + 0.0028, lng: baseLng - 0.0003 },
-    { lat: baseLat + 0.0030, lng: baseLng - 0.0007 },
-    { lat: baseLat + 0.0026, lng: baseLng - 0.0009 },
-    { lat: baseLat + 0.0032, lng: baseLng - 0.0005 },
-    { lat: baseLat + 0.0029, lng: baseLng - 0.0011 },
-    { lat: baseLat + 0.0031, lng: baseLng - 0.0004 },
-    { lat: baseLat + 0.0027, lng: baseLng - 0.0008 },
-    { lat: baseLat + 0.0035, lng: baseLng - 0.0006 },
-    { lat: baseLat + 0.0024, lng: baseLng - 0.0010 },
-    { lat: baseLat + 0.0033, lng: baseLng - 0.0003 },
-    { lat: baseLat + 0.0028, lng: baseLng - 0.0005 },
-    { lat: baseLat + 0.0030, lng: baseLng - 0.0012 },
-    { lat: baseLat + 0.0026, lng: baseLng - 0.0007 },
-    { lat: baseLat + 0.0034, lng: baseLng - 0.0009 },
-    { lat: baseLat + 0.0029, lng: baseLng - 0.0004 },
-    { lat: baseLat + 0.0031, lng: baseLng - 0.0008 },
-    { lat: baseLat + 0.0027, lng: baseLng - 0.0006 },
-    { lat: baseLat + 0.0033, lng: baseLng - 0.0011 },
-    { lat: baseLat + 0.0025, lng: baseLng - 0.0005 },
-    { lat: baseLat + 0.0032, lng: baseLng - 0.0003 },
-    { lat: baseLat + 0.0028, lng: baseLng - 0.0009 },
-    { lat: baseLat + 0.0030, lng: baseLng - 0.0006 },
-    { lat: baseLat + 0.0035, lng: baseLng - 0.0010 },
+  const waveConfigs = [
+    { startLat: baseLat + 0.0030, startLng: baseLng - 0.0008, dirLat: -0.0006, dirLng: 0.0005, pts: 8, speed: 13.3 },
+    { startLat: baseLat + 0.0032, startLng: baseLng - 0.0012, dirLat: -0.0005, dirLng: 0.0006, pts: 8, speed: 13.2 },
+    { startLat: baseLat + 0.0028, startLng: baseLng - 0.0004, dirLat: -0.0007, dirLng: 0.0004, pts: 10, speed: 15.1 },
+    { startLat: baseLat + 0.0035, startLng: baseLng - 0.0010, dirLat: -0.0005, dirLng: 0.0005, pts: 7, speed: 11.8 },
+    { startLat: baseLat + 0.0026, startLng: baseLng - 0.0006, dirLat: -0.0006, dirLng: 0.0006, pts: 9, speed: 14.5 },
+    { startLat: baseLat + 0.0033, startLng: baseLng - 0.0003, dirLat: -0.0004, dirLng: 0.0005, pts: 6, speed: 10.2 },
+    { startLat: baseLat + 0.0029, startLng: baseLng - 0.0011, dirLat: -0.0006, dirLng: 0.0004, pts: 11, speed: 16.7 },
+    { startLat: baseLat + 0.0036, startLng: baseLng - 0.0007, dirLat: -0.0005, dirLng: 0.0006, pts: 7, speed: 12.4 },
+    { startLat: baseLat + 0.0024, startLng: baseLng - 0.0009, dirLat: -0.0007, dirLng: 0.0005, pts: 9, speed: 18.4 },
+    { startLat: baseLat + 0.0031, startLng: baseLng - 0.0005, dirLat: -0.0005, dirLng: 0.0004, pts: 8, speed: 13.9 },
+    { startLat: baseLat + 0.0027, startLng: baseLng - 0.0013, dirLat: -0.0006, dirLng: 0.0006, pts: 7, speed: 11.1 },
+    { startLat: baseLat + 0.0034, startLng: baseLng - 0.0004, dirLat: -0.0004, dirLng: 0.0005, pts: 6, speed: 9.8 },
   ];
 
-  for (const ws of waveStarts) {
+  for (const cfg of waveConfigs) {
     const wavePoints: { lat: number; lng: number; time: number; speed?: number }[] = [];
-    const rideDirLat = -0.0004 + Math.random() * 0.0002;
-    const rideDirLng = 0.0003 + Math.random() * 0.0004;
-    const numPts = 5 + Math.floor(Math.random() * 6);
-    const speed = 8 + Math.random() * 14;
 
-    for (let i = 0; i < numPts; i++) {
-      const frac = i / (numPts - 1);
-      const curve = Math.sin(frac * Math.PI * (0.8 + Math.random() * 0.6));
+    for (let i = 0; i < cfg.pts; i++) {
+      const frac = i / (cfg.pts - 1);
+      const jitter = 0.00003;
       wavePoints.push({
-        lat: ws.lat + rideDirLat * frac + curve * 0.00008 * (Math.random() - 0.5),
-        lng: ws.lng + rideDirLng * frac + curve * 0.00015 * (Math.random() > 0.5 ? 1 : -1),
+        lat: cfg.startLat + cfg.dirLat * frac + (Math.random() - 0.5) * jitter,
+        lng: cfg.startLng + cfg.dirLng * frac + (Math.random() - 0.5) * jitter,
         time: t,
-        speed: speed * (1 - frac * 0.3),
+        speed: cfg.speed * (1 - frac * 0.25),
       });
       t += 2;
     }
     waves.push({ points: wavePoints });
 
-    addPaddle(ws.lat - 0.0002, ws.lng + 0.0001);
-    addPaddle(ws.lat, ws.lng);
+    addPaddle(cfg.startLat - 0.0003, cfg.startLng + 0.0002);
+    addPaddle(cfg.startLat, cfg.startLng);
   }
 
   return { paddlePath, waves };
@@ -154,9 +128,9 @@ export async function seedDatabase() {
         spotName: "Silver Strand",
         latitude: 32.6305,
         longitude: -117.1420,
-        sessionDate: new Date("2026-02-09T14:57:00"),
+        sessionDate: new Date("2026-02-09T09:57:00"),
         waterTimeMinutes: 122,
-        waveCount: 33,
+        waveCount: 12,
         distanceMiles: 1.2,
         longestWaveSeconds: 503,
         maxSpeed: 18.4,
