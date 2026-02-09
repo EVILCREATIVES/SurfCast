@@ -13,7 +13,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SurfChat } from "@/components/surf-chat";
-import { Waves, ChevronLeft, ChevronRight, MapPin, List, X, Activity, Search } from "lucide-react";
+import { Waves, ChevronLeft, ChevronRight, MapPin, List, X, Activity } from "lucide-react";
 import type { SurfSpot, ForecastResponse, InsertSurfSpot } from "@shared/schema";
 
 export default function Home() {
@@ -27,7 +27,6 @@ export default function Home() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileForecastExpanded, setMobileForecastExpanded] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const flyToRef = useRef<((lat: number, lng: number) => void) | null>(null);
 
   const { data: spots = [], isLoading: spotsLoading } = useQuery<SurfSpot[]>({
@@ -99,7 +98,6 @@ export default function Home() {
     setForecastLocation({ lat, lng });
     setLocationName(name);
     setSelectedSpot(null);
-    setSearchOpen(false);
     if (flyToRef.current) {
       flyToRef.current(lat, lng);
     }
@@ -119,6 +117,9 @@ export default function Home() {
 
   const sidebarContent = (
     <>
+      <div className="px-3 py-2">
+        <SearchLocation onLocationSelect={handleSearchSelect} />
+      </div>
       <div className="flex-1 min-h-0 overflow-hidden">
         <SpotList
           spots={spots}
@@ -145,44 +146,19 @@ export default function Home() {
             onFlyTo={(fn) => { flyToRef.current = fn; }}
           />
 
-          <div className="absolute top-3 left-3 z-[1000] flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="secondary"
-                onClick={() => setSidebarOpen(true)}
-                data-testid="button-toggle-sidebar"
-              >
-                <List className="w-4 h-4" />
-              </Button>
-              <div className="flex items-center gap-1.5 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1">
-                <Waves className="w-4 h-4 text-primary" />
-                <span className="text-sm font-bold">SurfCast</span>
-              </div>
+          <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="secondary"
+              onClick={() => setSidebarOpen(true)}
+              data-testid="button-toggle-sidebar"
+            >
+              <List className="w-4 h-4" />
+            </Button>
+            <div className="flex items-center gap-1.5 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1">
+              <Waves className="w-4 h-4 text-primary" />
+              <span className="text-sm font-bold">SurfCast</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => navigate("/sessions")}
-                data-testid="button-sessions-mobile"
-              >
-                <Activity className="w-4 h-4 mr-1.5" />
-                Sessions
-              </Button>
-              <Button
-                size="icon"
-                variant="secondary"
-                onClick={() => setSearchOpen(!searchOpen)}
-                data-testid="button-search-toggle-mobile"
-              >
-                <Search className="w-4 h-4" />
-              </Button>
-            </div>
-            {searchOpen && (
-              <div className="w-64 bg-sidebar/95 backdrop-blur-sm border border-border rounded-md p-2 shadow-lg">
-                <SearchLocation onLocationSelect={handleSearchSelect} />
-              </div>
-            )}
           </div>
 
           {clickedLocation && (
@@ -246,6 +222,14 @@ export default function Home() {
                 <Waves className="w-5 h-5 text-primary shrink-0" />
                 <SheetTitle className="text-base font-bold tracking-tight">SurfCast</SheetTitle>
                 <div className="ml-auto flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => { setSidebarOpen(false); navigate("/sessions"); }}
+                    data-testid="button-sessions-mobile"
+                  >
+                    <Activity className="w-4 h-4" />
+                  </Button>
                   <ThemeToggle />
                 </div>
               </div>
@@ -295,40 +279,23 @@ export default function Home() {
           onFlyTo={(fn) => { flyToRef.current = fn; }}
         />
 
-        <div className="absolute top-3 left-3 z-[1000] flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="secondary"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              data-testid="button-toggle-sidebar"
-            >
-              {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => navigate("/sessions")}
-              data-testid="button-sessions-desktop"
-            >
-              <Activity className="w-4 h-4 mr-1.5" />
-              Your Sessions
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="secondary"
-              onClick={() => setSearchOpen(!searchOpen)}
-              data-testid="button-search-toggle"
-            >
-              <Search className="w-4 h-4" />
-            </Button>
-          </div>
-          {searchOpen && (
-            <div className="w-80 bg-sidebar/95 backdrop-blur-sm border border-border rounded-md p-2 shadow-lg">
-              <SearchLocation onLocationSelect={handleSearchSelect} />
-            </div>
-          )}
+        <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="secondary"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            data-testid="button-toggle-sidebar"
+          >
+            {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/sessions")}
+            data-testid="button-sessions-desktop"
+          >
+            <Activity className="w-4 h-4 mr-1.5" />
+            Your Sessions
+          </Button>
         </div>
 
         {clickedLocation && (
