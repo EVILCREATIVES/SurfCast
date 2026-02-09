@@ -133,7 +133,7 @@ const FRAG_SCREEN = `
   varying vec2 v_tex_pos;
   void main() {
     vec4 color = texture2D(u_screen, vec2(v_tex_pos.x, 1.0 - v_tex_pos.y));
-    gl_FragColor = vec4(color.rgb, color.a * u_opacity);
+    gl_FragColor = vec4(color.rgb * u_opacity, 0.0);
   }
 `;
 
@@ -144,7 +144,7 @@ const FRAG_FADE = `
   varying vec2 v_tex_pos;
   void main() {
     vec4 color = texture2D(u_screen, v_tex_pos);
-    gl_FragColor = vec4(floor(color.rgb * u_fade * 255.0) / 255.0, color.a * u_fade);
+    gl_FragColor = vec4(floor(color.rgb * u_fade * 255.0) / 255.0, 1.0);
   }
 `;
 
@@ -222,7 +222,7 @@ export class WindGL {
   private particleStateResolution: number = 0;
   private numParticles: number = 0;
 
-  fadeOpacity = 0.996;
+  fadeOpacity = 0.94;
   speedFactor = 0.25;
   dropRate = 0.003;
   dropRateBump = 0.01;
@@ -316,26 +316,22 @@ export class WindGL {
   private drawScreen() {
     const gl = this.gl;
 
-    // Step 1: Render faded previous frame + new particles into screenTextures[1]
     bindFramebuffer(gl, this.framebuffer, this.screenTextures[1]);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    // Fade pass overwrites the target entirely (no blending needed - full-screen quad)
     gl.disable(gl.BLEND);
     this.drawFade();
 
-    // Particles blend on top of the faded content
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     this.drawParticles();
     gl.disable(gl.BLEND);
 
-    // Step 2: Draw the composited screen texture to the actual canvas
     bindFramebuffer(gl, null);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.blendFunc(gl.ONE, gl.ONE);
 
     const prog = this.screenProgram;
     gl.useProgram(prog);
@@ -352,7 +348,6 @@ export class WindGL {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.disable(gl.BLEND);
 
-    // Swap screen textures for next frame
     const tmp = this.screenTextures[0];
     this.screenTextures[0] = this.screenTextures[1];
     this.screenTextures[1] = tmp;
