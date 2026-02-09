@@ -8,10 +8,10 @@ import { Wind, Waves, Layers } from "lucide-react";
 import type { SurfSpot } from "@shared/schema";
 
 const MAP_LAYERS = [
-  { id: "dark", label: "Dark", url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
-  { id: "satellite", label: "Satellite", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr: '&copy; Esri' },
-  { id: "street", label: "Street", url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
-  { id: "topo", label: "Topo", url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attr: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>' },
+  { id: "dark", label: "Dark", url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', bg: "#1a1a2e" },
+  { id: "satellite", label: "Satellite", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr: '&copy; Esri', bg: "#2c3e2e" },
+  { id: "street", label: "Street", url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', bg: "#e8e0d8" },
+  { id: "topo", label: "Topo", url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attr: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>', bg: "#d4e6c8" },
 ] as const;
 
 const surfPinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
@@ -82,6 +82,14 @@ function FlyToHandler({ onFlyTo }: { onFlyTo?: (fn: (lat: number, lng: number) =
   return null;
 }
 
+function MapBackgroundSync({ bg }: { bg: string }) {
+  const map = useMap();
+  useEffect(() => {
+    map.getContainer().style.background = bg;
+  }, [map, bg]);
+  return null;
+}
+
 export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, onMapClick, onFlyTo }: SurfMapProps) {
   const [showWind, setShowWind] = useState(true);
   const [showWaves, setShowWaves] = useState(true);
@@ -95,19 +103,20 @@ export function SurfMap({ spots, selectedSpot, clickedLocation, onSpotSelect, on
         center={[20, 0]}
         zoom={3}
         className="w-full h-full"
-        style={{ background: "#1a1a2e" }}
+        style={{ background: activeLayer.bg }}
         zoomControl={false}
       >
         <TileLayer
           key={activeLayer.id}
           attribution={activeLayer.attr}
           url={activeLayer.url}
-          keepBuffer={6}
+          keepBuffer={10}
           updateWhenZooming={false}
           updateWhenIdle={false}
           tileSize={256}
           maxNativeZoom={18}
         />
+        <MapBackgroundSync bg={activeLayer.bg} />
         <MapClickHandler onMapClick={onMapClick} />
         <FlyToHandler onFlyTo={onFlyTo} />
         <WindWaveLayer showWind={showWind} showWaves={showWaves} />
