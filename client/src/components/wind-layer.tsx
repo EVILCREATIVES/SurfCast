@@ -39,13 +39,14 @@ const BASE_ZOOM = 4;
 
 function getZoomParams(zoom: number) {
   const z = Math.max(2, Math.min(zoom, 18));
-  const delta = z - BASE_ZOOM;
-  const t = Math.max(0, delta) / 10;
-  const particleCount = Math.round(1500 * (1 - t * 0.75));
-  const speedScale = 0.12 * (1 - t * 0.6);
-  const trailFade = Math.min(0.95, 0.92 + t * 0.03);
-  const maxAge = Math.round(120 * (1 + t * 0.4));
-  const lineWidth = Math.max(0.7, 1.0 - t * 0.3);
+  const delta = Math.max(0, z - BASE_ZOOM);
+  const t = Math.min(1, delta / 6);
+  const ease = t * t;
+  const particleCount = Math.max(150, Math.round(1500 * (1 - ease * 0.9)));
+  const speedScale = 0.12 * Math.max(0.15, 1 - ease * 0.85);
+  const trailFade = Math.min(0.96, 0.92 + ease * 0.04);
+  const maxAge = Math.round(120 * (1 + ease * 0.8));
+  const lineWidth = Math.max(0.5, 1.0 - ease * 0.5);
   return { particleCount, speedScale, trailFade, maxAge, lineWidth };
 }
 
