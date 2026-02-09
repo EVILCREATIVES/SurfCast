@@ -160,31 +160,31 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     const mapPane = container.querySelector(".leaflet-map-pane") as HTMLElement;
     if (!mapPane) return;
 
-    let overlay = container.querySelector(".wind-wave-overlay") as HTMLElement | null;
+    let overlay = mapPane.querySelector(".wind-wave-overlay") as HTMLElement | null;
     if (!overlay) {
       overlay = document.createElement("div");
       overlay.className = "wind-wave-overlay";
       overlay.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;z-index:450;pointer-events:none;";
-      container.appendChild(overlay);
+
+      const markerPane = mapPane.querySelector(".leaflet-marker-pane");
+      if (markerPane) {
+        mapPane.insertBefore(overlay, markerPane);
+      } else {
+        mapPane.appendChild(overlay);
+      }
     }
     setPortalTarget(overlay);
 
-    const popupPane = mapPane.querySelector(".leaflet-popup-pane") as HTMLElement | null;
-    const tooltipPane = mapPane.querySelector(".leaflet-tooltip-pane") as HTMLElement | null;
-
-    if (popupPane && popupPane.parentElement === mapPane) {
-      container.appendChild(popupPane);
-      popupPane.style.zIndex = "800";
-    }
-    if (tooltipPane && tooltipPane.parentElement === mapPane) {
-      container.appendChild(tooltipPane);
-      tooltipPane.style.zIndex = "801";
-    }
-
     const syncTransform = () => {
       const transform = mapPane.style.transform;
-      if (popupPane) popupPane.style.transform = transform;
-      if (tooltipPane) tooltipPane.style.transform = transform;
+      if (transform && overlay) {
+        const match = transform.match(/translate3d\(([^,]+),\s*([^,]+)/);
+        if (match) {
+          const tx = parseFloat(match[1]);
+          const ty = parseFloat(match[2]);
+          overlay.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
+        }
+      }
     };
 
     const observer = new MutationObserver(syncTransform);
@@ -194,16 +194,6 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     return () => {
       observer.disconnect();
       overlay?.remove();
-      if (popupPane) {
-        popupPane.style.transform = "";
-        popupPane.style.zIndex = "";
-        mapPane.appendChild(popupPane);
-      }
-      if (tooltipPane) {
-        tooltipPane.style.transform = "";
-        tooltipPane.style.zIndex = "";
-        mapPane.appendChild(tooltipPane);
-      }
     };
   }, [map]);
 

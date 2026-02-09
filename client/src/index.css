@@ -308,14 +308,3 @@
 .dark .leaflet-popup-tip {
   background: #1e293b !important;
 }
-
-.webcam-popup .leaflet-popup-content-wrapper {
-  padding: 0 !important;
-  border-radius: 8px !important;
-  overflow: hidden;
-}
-
-.webcam-popup .leaflet-popup-content {
-  margin: 0 !important;
-  width: 100% !important;
-}
