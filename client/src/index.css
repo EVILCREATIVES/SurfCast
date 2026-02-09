@@ -286,3 +286,25 @@
     inset: -1px;
   }
 }
+
+.leaflet-popup-pane {
+  z-index: 800 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #fff !important;
+  position: relative;
+  z-index: 1;
+}
+
+.dark .leaflet-popup-content-wrapper {
+  background: #1e293b !important;
+}
+
+.leaflet-popup-tip {
+  background: #fff !important;
+}
+
+.dark .leaflet-popup-tip {
+  background: #1e293b !important;
+}
