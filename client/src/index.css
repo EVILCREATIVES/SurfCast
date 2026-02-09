@@ -321,6 +321,11 @@
   z-index: 900 !important;
 }
 
+.webcam-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
 .webcam-popup .leaflet-popup-content-wrapper {
   padding: 0 !important;
   overflow: hidden;
