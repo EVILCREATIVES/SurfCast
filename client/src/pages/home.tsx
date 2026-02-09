@@ -276,7 +276,7 @@ export default function Home() {
           onFlyTo={(fn) => { flyToRef.current = fn; }}
         />
 
-        <div className="absolute top-3 left-3 z-[1000]">
+        <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2">
           <Button
             size="icon"
             variant="secondary"
@@ -285,6 +285,12 @@ export default function Home() {
           >
             {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </Button>
+          {!sidebarOpen && (
+            <div className="flex items-center gap-1.5 bg-background/80 backdrop-blur-sm rounded-md px-2 py-1">
+              <Waves className="w-4 h-4 text-primary" />
+              <span className="text-sm font-bold">SurfCast</span>
+            </div>
+          )}
         </div>
 
         <div className="absolute top-3 right-3 z-[1001]">
