@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
 import { LogIn } from "lucide-react";
+import surferAvatar from "@assets/images/surfer-avatar.png";
 
 export function UserMenu() {
   const { user } = useAuth();
@@ -40,6 +41,7 @@ export function UserMenu() {
       data-testid="button-user-menu"
     >
       <Avatar className="w-10 h-10 cursor-pointer ring-2 ring-white/80 dark:ring-white/60">
+        <AvatarImage src={surferAvatar} alt="Profile" className="object-cover" />
         <AvatarFallback className="text-sm font-bold bg-primary text-primary-foreground">{initials}</AvatarFallback>
       </Avatar>
     </button>
