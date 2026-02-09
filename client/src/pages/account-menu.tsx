@@ -1,8 +1,9 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { User, Activity, Settings, LogOut, ChevronRight } from "lucide-react";
+import { User, Activity, Settings, LogOut, ChevronRight, X } from "lucide-react";
 
 interface MenuItem {
   label: string;
@@ -50,8 +51,13 @@ export default function AccountMenu() {
   };
 
   return (
-    <div className="flex flex-col w-full bg-background max-h-[90vh]">
-      <div className="flex flex-col items-center gap-2 pt-8 pb-4 px-4">
+    <div className="flex flex-col w-full bg-background">
+      <div className="flex justify-end px-4 pt-3">
+        <Button size="icon" variant="ghost" onClick={() => navigate("/")} data-testid="button-close-overlay">
+          <X className="w-4 h-4" />
+        </Button>
+      </div>
+      <div className="flex flex-col items-center gap-2 pb-4 px-4">
         <Avatar className="w-16 h-16">
           <AvatarFallback className="text-xl bg-primary/10 text-primary">{initials}</AvatarFallback>
         </Avatar>

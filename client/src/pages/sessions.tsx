@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Polyline } from "react-leaflet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Waves, Timer, Route, Clock, Zap, ChevronRight, Droplets, Gauge } from "lucide-react";
+import { ArrowLeft, X, Waves, Timer, Route, Clock, Zap, ChevronRight, Droplets, Gauge } from "lucide-react";
 import type { SurfSession, SessionTrackData } from "@shared/schema";
 import "leaflet/dist/leaflet.css";
 
@@ -194,7 +194,7 @@ function WaveRow({ wave, index, isHighlighted, onHover }: {
   );
 }
 
-function SessionDetail({ session, onBack }: { session: SurfSession; onBack: () => void }) {
+function SessionDetail({ session, onBack, onClose }: { session: SurfSession; onBack: () => void; onClose: () => void }) {
   const [highlightWave, setHighlightWave] = useState<number | null>(null);
   const trackData = session.trackData as unknown as SessionTrackData;
   const waves = trackData?.waves || [];
@@ -216,6 +216,9 @@ function SessionDetail({ session, onBack }: { session: SurfSession; onBack: () =
           <h2 className="font-bold text-base truncate" data-testid="text-session-detail-name">{session.spotName}</h2>
           <p className="text-xs text-muted-foreground">{formatDate(session.sessionDate as unknown as string)}</p>
         </div>
+        <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-overlay">
+          <X className="w-4 h-4" />
+        </Button>
       </header>
 
       <div className="flex-1 overflow-auto min-h-0">
@@ -322,7 +325,7 @@ export default function Sessions() {
   if (selectedSession) {
     return (
       <div className="w-full max-h-[90vh]">
-        <SessionDetail session={selectedSession} onBack={() => setSelectedSessionId(null)} />
+        <SessionDetail session={selectedSession} onBack={() => setSelectedSessionId(null)} onClose={() => navigate("/")} />
       </div>
     );
   }
@@ -334,7 +337,10 @@ export default function Sessions() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <Waves className="w-5 h-5 text-primary shrink-0" />
-        <h1 className="text-base font-bold">Your Sessions</h1>
+        <h1 className="text-base font-bold flex-1">Your Sessions</h1>
+        <Button size="icon" variant="ghost" onClick={() => navigate("/")} data-testid="button-close-overlay">
+          <X className="w-4 h-4" />
+        </Button>
       </header>
 
       <div className="flex-1 overflow-auto p-4">

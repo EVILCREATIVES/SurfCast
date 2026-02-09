@@ -12,29 +12,18 @@ import Sessions from "@/pages/sessions";
 import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
 import AccountMenu from "@/pages/account-menu";
-import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 function PageOverlay({ children }: { children: React.ReactNode }) {
   const [, navigate] = useLocation();
 
   return (
-    <div className="fixed inset-0 z-[1500] flex items-center justify-center">
+    <div className="fixed inset-0 z-[1500] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => navigate("/")}
         data-testid="overlay-backdrop"
       />
-      <div className="relative z-10 w-full max-w-lg mx-4 max-h-[90vh] rounded-md overflow-hidden shadow-2xl border border-border">
-        <Button
-          size="icon"
-          variant="ghost"
-          className="absolute top-2 right-2 z-20"
-          onClick={() => navigate("/")}
-          data-testid="button-close-overlay"
-        >
-          <X className="w-4 h-4" />
-        </Button>
+      <div className="relative z-10 w-full max-w-lg max-h-full rounded-md overflow-auto shadow-2xl border border-border">
         {children}
       </div>
     </div>

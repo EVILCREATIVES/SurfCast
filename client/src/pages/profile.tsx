@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, User, Mail, Calendar, Waves } from "lucide-react";
+import { ArrowLeft, X, User, Mail, Calendar, Waves } from "lucide-react";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -20,7 +20,10 @@ export default function Profile() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <User className="w-5 h-5 text-primary shrink-0" />
-        <h1 className="text-base font-bold">Profile</h1>
+        <h1 className="text-base font-bold flex-1">Profile</h1>
+        <Button size="icon" variant="ghost" onClick={() => navigate("/")} data-testid="button-close-overlay">
+          <X className="w-4 h-4" />
+        </Button>
       </header>
 
       <div className="flex-1 overflow-auto p-4">
