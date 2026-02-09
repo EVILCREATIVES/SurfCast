@@ -156,42 +156,16 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
   const visible = showWind || showWaves;
 
   useEffect(() => {
-    const mapPane = map.getPane("mapPane");
-    if (!mapPane) return;
-    let overlay = mapPane.querySelector(".wind-wave-overlay") as HTMLElement | null;
+    const container = map.getContainer();
+    let overlay = container.querySelector(".wind-wave-overlay") as HTMLElement | null;
     if (!overlay) {
       overlay = document.createElement("div");
       overlay.className = "wind-wave-overlay";
       overlay.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;z-index:450;pointer-events:none;";
-      mapPane.appendChild(overlay);
+      container.appendChild(overlay);
     }
     setPortalTarget(overlay);
-
-    const resetTransform = () => {
-      if (overlay) {
-        const t = mapPane.style.transform;
-        if (t) {
-          const match = t.match(/translate3d\(([^,]+),\s*([^,]+)/);
-          if (match) {
-            const x = parseFloat(match[1]);
-            const y = parseFloat(match[2]);
-            overlay.style.transform = `translate3d(${-x}px, ${-y}px, 0)`;
-          }
-        }
-      }
-    };
-
-    map.on("move", resetTransform);
-    map.on("moveend", resetTransform);
-    map.on("zoom", resetTransform);
-    map.on("zoomend", resetTransform);
-    resetTransform();
-
     return () => {
-      map.off("move", resetTransform);
-      map.off("moveend", resetTransform);
-      map.off("zoom", resetTransform);
-      map.off("zoomend", resetTransform);
       overlay?.remove();
     };
   }, [map]);
