@@ -170,12 +170,14 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     };
   }, [map]);
 
-  const fetchGridData = useCallback(async () => {
-    const bounds = map.getBounds();
-    const zoom = Math.round(map.getZoom());
-    const boundsKey = `${bounds.getSouth().toFixed(2)},${bounds.getNorth().toFixed(2)},${bounds.getWest().toFixed(2)},${bounds.getEast().toFixed(2)},z${zoom}`;
+  const retryCountRef = useRef(0);
+  const retryTimerRef = useRef<NodeJS.Timeout>();
 
-    if (boundsKey === lastBoundsRef.current) return;
+  const fetchGridData = useCallback(async (isRetry = false) => {
+    const bounds = map.getBounds();
+    const boundsKey = `${bounds.getSouth().toFixed(1)},${bounds.getNorth().toFixed(1)},${bounds.getWest().toFixed(1)},${bounds.getEast().toFixed(1)}`;
+
+    if (!isRetry && boundsKey === lastBoundsRef.current) return;
     lastBoundsRef.current = boundsKey;
 
     try {
@@ -184,7 +186,21 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       );
       if (res.ok) {
         const data = await res.json();
-        setPoints(data.points || []);
+        const pts = data.points || [];
+        if (pts.length > 0) {
+          retryCountRef.current = 0;
+          setPoints(pts);
+        } else if (retryCountRef.current < 3) {
+          retryCountRef.current++;
+          const delay = Math.min(5000 * Math.pow(2, retryCountRef.current - 1), 30000);
+          lastBoundsRef.current = "";
+          retryTimerRef.current = setTimeout(() => fetchGridData(true), delay);
+        }
+      } else if (res.status === 429 && retryCountRef.current < 3) {
+        retryCountRef.current++;
+        const delay = Math.min(5000 * Math.pow(2, retryCountRef.current - 1), 30000);
+        lastBoundsRef.current = "";
+        retryTimerRef.current = setTimeout(() => fetchGridData(true), delay);
       } else {
         lastBoundsRef.current = "";
       }
@@ -210,6 +226,9 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     if (visible) {
       fetchGridData();
     }
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
   }, [visible, fetchGridData]);
 
   const syncCanvasSize = useCallback((canvas: HTMLCanvasElement) => {

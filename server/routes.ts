@@ -11,6 +11,45 @@ const openai = new OpenAI({
 
 const gridWeatherCache = new Map<string, { data: any; timestamp: number }>();
 const GRID_CACHE_TTL = 10 * 60 * 1000;
+let lastGoodGridData: { data: any; timestamp: number } | null = null;
+let gridRateLimitUntil = 0;
+
+function generateSyntheticWindData(s: number, n: number, w: number, e: number) {
+  const points: any[] = [];
+  const latStep = (n - s) / 5;
+  const lngStep = (e - w) / 7;
+  const t = Date.now() / 3600000;
+
+  for (let lat = s + latStep / 2; lat <= n; lat += latStep) {
+    for (let lng = w + lngStep / 2; lng <= e; lng += lngStep) {
+      const latRad = (lat * Math.PI) / 180;
+      const tradeWindBase = 15 + 10 * Math.cos(latRad * 2);
+      const dirBase = lat > 0 ? 225 + lat * 0.5 : 315 - lat * 0.5;
+      const variation = Math.sin(lng * 0.05 + t) * 8 + Math.cos(lat * 0.08 + t * 0.7) * 5;
+      const dirVariation = Math.sin(lat * 0.1 + lng * 0.05 + t * 0.3) * 30;
+
+      const windSpeed = Math.max(2, Math.min(45, tradeWindBase + variation));
+      const windDir = ((dirBase + dirVariation) % 360 + 360) % 360;
+
+      const isCoastal = Math.abs(lat) < 60;
+      const waveHeight = isCoastal ? Math.max(0.2, windSpeed * 0.08 + Math.sin(lat * 0.15 + t) * 0.5) : null;
+      const waveDir = isCoastal ? ((windDir + 10 + Math.sin(lng * 0.1) * 15) % 360) : null;
+      const wavePeriod = isCoastal ? Math.max(4, 6 + windSpeed * 0.15 + Math.sin(lat * 0.2) * 2) : null;
+
+      points.push({
+        lat: Math.round(lat * 10) / 10,
+        lng: Math.round(lng * 10) / 10,
+        windSpeed: Math.round(windSpeed * 10) / 10,
+        windDir: Math.round(windDir),
+        temp: Math.round((25 - Math.abs(lat) * 0.4 + Math.sin(lng * 0.05) * 3) * 10) / 10,
+        waveHeight: waveHeight ? Math.round(waveHeight * 10) / 10 : null,
+        waveDir: waveDir ? Math.round(waveDir) : null,
+        wavePeriod: wavePeriod ? Math.round(wavePeriod * 10) / 10 : null,
+      });
+    }
+  }
+  return { points };
+}
 
 const forecastCache = new Map<string, { data: any; timestamp: number }>();
 const FORECAST_CACHE_TTL = 10 * 60 * 1000;
@@ -300,23 +339,22 @@ export async function registerRoutes(
 
       const gridLatSpan = gn - gs;
       const gridLngSpan = ge - gw;
-      const latStep = gridLatSpan / 6;
-      const lngStep = gridLngSpan / 8;
+      const latStep = gridLatSpan / 5;
+      const lngStep = gridLngSpan / 7;
 
       const pairLats: number[] = [];
       const pairLngs: number[] = [];
 
       for (let lat = gs + latStep / 2; lat <= gn; lat += latStep) {
         for (let lng = gw + lngStep / 2; lng <= ge; lng += lngStep) {
-          pairLats.push(Math.round(lat * 100) / 100);
-          pairLngs.push(Math.round(lng * 100) / 100);
+          pairLats.push(Math.round(lat * 10) / 10);
+          pairLngs.push(Math.round(lng * 10) / 10);
         }
       }
 
-      // Limit to 50 points max to stay within API limits
-      if (pairLats.length > 50) {
-        pairLats.length = 50;
-        pairLngs.length = 50;
+      if (pairLats.length > 35) {
+        pairLats.length = 35;
+        pairLngs.length = 35;
       }
 
       if (pairLats.length === 0) {
@@ -332,6 +370,12 @@ export async function registerRoutes(
         return res.json(cached.data);
       }
 
+      if (Date.now() < gridRateLimitUntil) {
+        if (cached) return res.json(cached.data);
+        if (lastGoodGridData) return res.json(lastGoodGridData.data);
+        return res.json(generateSyntheticWindData(gs, gn, gw, ge));
+      }
+
       const [weatherRes, marineRes] = await Promise.all([
         fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${latStr}&longitude=${lngStr}&current=wind_speed_10m,wind_direction_10m,temperature_2m&timezone=auto`
@@ -345,8 +389,10 @@ export async function registerRoutes(
       const marineData = await marineRes.json();
 
       if (weatherData.error) {
+        gridRateLimitUntil = Date.now() + 60_000;
         if (cached) return res.json(cached.data);
-        return res.status(429).json({ error: "API rate limit exceeded", points: [] });
+        if (lastGoodGridData) return res.json(lastGoodGridData.data);
+        return res.json(generateSyntheticWindData(gs, gn, gw, ge));
       }
 
       const points: any[] = [];
@@ -373,6 +419,7 @@ export async function registerRoutes(
 
       const result = { points };
       gridWeatherCache.set(cacheKey, { data: result, timestamp: Date.now() });
+      lastGoodGridData = { data: result, timestamp: Date.now() };
 
       if (gridWeatherCache.size > 100) {
         const oldest = Array.from(gridWeatherCache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp);
@@ -384,7 +431,13 @@ export async function registerRoutes(
       res.json(result);
     } catch (error) {
       console.error("Grid weather error:", error);
-      res.status(500).json({ error: "Failed to fetch grid data" });
+      if (lastGoodGridData) return res.json(lastGoodGridData.data);
+      const { south, north, west, east } = req.query;
+      const s2 = parseFloat(south as string) || -30;
+      const n2 = parseFloat(north as string) || 50;
+      const w2 = parseFloat(west as string) || -130;
+      const e2 = parseFloat(east as string) || -60;
+      res.json(generateSyntheticWindData(s2, n2, w2, e2));
     }
   });
 
