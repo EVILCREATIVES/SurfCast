@@ -1,5 +1,4 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertSurfSpotSchema, insertSurfSessionSchema } from "@shared/schema";
 import OpenAI from "openai";
@@ -209,10 +208,7 @@ function extractMentionedSpots(message: string): KnownSpot[] {
   return found;
 }
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+export function registerRoutes(app: Express): void {
   // Surf Spots CRUD
   app.get("/api/spots", async (_req, res) => {
     try {
@@ -810,6 +806,4 @@ PERSONALITY & STYLE:
       res.status(500).json({ error: "Failed to delete conversation" });
     }
   });
-
-  return httpServer;
 }
