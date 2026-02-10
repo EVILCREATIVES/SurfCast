@@ -3,9 +3,15 @@ import { storage } from "./storage";
 import { insertSurfSpotSchema, insertSurfSessionSchema } from "../shared/schema";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API,
-});
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) {
+    const key = process.env.OPENAI_API;
+    if (!key) throw new Error("OPENAI_API environment variable is not set");
+    _openai = new OpenAI({ apiKey: key });
+  }
+  return _openai;
+}
 
 const gridWeatherCache = new Map<string, { data: any; timestamp: number }>();
 const GRID_CACHE_TTL = 10 * 60 * 1000;
@@ -766,7 +772,7 @@ PERSONALITY & STYLE:
 
       res.write(`data: ${JSON.stringify({ type: "conversation", id: convId })}\n\n`);
 
-      const stream = await openai.chat.completions.create({
+      const stream = await getOpenAI().chat.completions.create({
         model: "gpt-4o",
         messages: chatMessages,
         stream: true,
