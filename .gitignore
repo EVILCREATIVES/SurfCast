@@ -7,5 +7,3 @@ vite.config.ts.*
 .env
 .env.local
 .vercel
-# Built Vercel API function
-api/index.js
