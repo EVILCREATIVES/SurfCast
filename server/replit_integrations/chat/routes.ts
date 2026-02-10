@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { chatStorage } from "./storage";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API,
 });
 
 export function registerChatRoutes(app: Express): void {

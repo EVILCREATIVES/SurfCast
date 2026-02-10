@@ -4,7 +4,7 @@ import { insertSurfSpotSchema, insertSurfSessionSchema } from "@shared/schema";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API,
+  apiKey: process.env.OPENAI_API,
 });
 
 const gridWeatherCache = new Map<string, { data: any; timestamp: number }>();
@@ -449,7 +449,7 @@ export function registerRoutes(app: Express): void {
         return res.status(400).json({ error: "Invalid bounds" });
       }
 
-      const apiKey = process.env.WINDY_WEBCAMS_API_KEY || process.env.Windy_Webcams_API;
+      const apiKey = process.env.Windy_Webcams_API;
       if (!apiKey) {
         return res.status(500).json({ error: "Webcam API key not configured" });
       }

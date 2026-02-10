@@ -3,7 +3,7 @@ import OpenAI, { toFile } from "openai";
 import { Buffer } from "node:buffer";
 
 export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API,
 });
 
 /**
