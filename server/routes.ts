@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { storage } from "./storage";
-import { insertSurfSpotSchema, insertSurfSessionSchema } from "@shared/schema";
+import { insertSurfSpotSchema, insertSurfSessionSchema } from "../shared/schema";
 import OpenAI from "openai";
 
 const openai = new OpenAI({

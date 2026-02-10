@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type SurfSpot, type InsertSurfSpot, type SurfSession, type InsertSurfSession, type Conversation, type Message, users, surfSpots, surfSessions, conversations, messages } from "@shared/schema";
+import { type User, type InsertUser, type SurfSpot, type InsertSurfSpot, type SurfSession, type InsertSurfSession, type Conversation, type Message, users, surfSpots, surfSessions, conversations, messages } from "../shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 

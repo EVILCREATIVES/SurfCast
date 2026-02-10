@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { surfSpots, surfSessions, users } from "@shared/schema";
-import type { SessionTrackData } from "@shared/schema";
+import { surfSpots, surfSessions, users } from "../shared/schema";
+import type { SessionTrackData } from "../shared/schema";
 
 const defaultSpots = [
   // Hawaii
