@@ -34,7 +34,7 @@ await build({
   platform: "node",
   bundle: true,
   format: "esm",
-  outfile: "api/index.js",
+  outfile: "api/[...path].js",
   alias: {
     "@shared": "./shared",
     "@": "./client/src",

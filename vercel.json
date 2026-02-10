@@ -2,11 +2,8 @@
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist/public",
   "framework": "vite",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" }
-  ],
   "functions": {
-    "api/index.js": {
+    "api/[...path].js": {
       "maxDuration": 30
     }
   }
