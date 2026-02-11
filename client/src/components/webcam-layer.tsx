@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useMap, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
+import maplibregl from "maplibre-gl";
 
 interface Webcam {
   id: number;
@@ -13,6 +12,11 @@ interface Webcam {
   player: string | null;
 }
 
+interface WebcamLayerProps {
+  map: maplibregl.Map;
+  showWebcams: boolean; // Assuming this might be controlled, or always on if component is present
+}
+
 export const MIN_ZOOM_FOR_WEBCAMS = 6;
 
 const camIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28">
@@ -22,23 +26,11 @@ const camIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" 
   <circle cx="11.5" cy="14" r="2.2" fill="#0ea5e9"/>
 </svg>`;
 
-const camIcon = L.divIcon({
-  html: camIconSvg,
-  className: "webcam-marker",
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-  popupAnchor: [0, -14],
-});
-
-export function WebcamLayer() {
-  const map = useMap();
+export function WebcamLayer({ map, showWebcams }: WebcamLayerProps) {
   const [webcams, setWebcams] = useState<Webcam[]>([]);
-  const [zoomLevel, setZoomLevel] = useState(map.getZoom());
-  const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markersRef = useRef<Map<number, maplibregl.Marker>>(new Map());
   const lastBoundsRef = useRef<string>("");
-
-  const tooZoomedOut = zoomLevel < MIN_ZOOM_FOR_WEBCAMS;
-
+  const fetchTimeoutRef = useRef<NodeJS.Timeout>();
 
   const fetchWebcams = useCallback(() => {
     if (map.getZoom() < MIN_ZOOM_FOR_WEBCAMS) {
@@ -52,104 +44,109 @@ export function WebcamLayer() {
     if (boundsKey === lastBoundsRef.current) return;
     lastBoundsRef.current = boundsKey;
 
-    const params = new URLSearchParams({
-      south: bounds.getSouth().toString(),
-      north: bounds.getNorth().toString(),
-      west: bounds.getWest().toString(),
-      east: bounds.getEast().toString(),
-    });
+    if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
 
-    fetch(`/api/webcams?${params}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.webcams) {
-          setWebcams(data.webcams);
+    fetchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+            `/api/webcams?south=${bounds.getSouth()}&north=${bounds.getNorth()}&west=${bounds.getWest()}&east=${bounds.getEast()}`
+        );
+        if (res.ok) {
+            const data = await res.json();
+            setWebcams(data);
         }
-      })
-      .catch(console.error);
+      } catch (err) {
+        console.error("Failed to fetch webcams", err);
+      }
+    }, 500);
   }, [map]);
 
-  const debouncedFetch = useCallback(() => {
-    if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
-    fetchTimeoutRef.current = setTimeout(fetchWebcams, 500);
-  }, [fetchWebcams]);
-
-  const handleMapChange = useCallback(() => {
-    setZoomLevel(map.getZoom());
-    debouncedFetch();
-  }, [map, debouncedFetch]);
-
+  // Listen to map events
   useEffect(() => {
-    fetchWebcams();
-    setZoomLevel(map.getZoom());
+      if (!showWebcams) return;
 
-    map.on("moveend", handleMapChange);
-    map.on("zoomend", handleMapChange);
+      map.on('moveend', fetchWebcams);
+      // Initial fetch
+      fetchWebcams(); 
 
-    return () => {
-      map.off("moveend", handleMapChange);
-      map.off("zoomend", handleMapChange);
-      if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
-    };
-  }, [map, fetchWebcams, handleMapChange]);
+      return () => {
+          map.off('moveend', fetchWebcams);
+      };
+  }, [map, fetchWebcams, showWebcams]);
 
-  if (tooZoomedOut) return null;
+  // Sync Markers
+  useEffect(() => {
+      if (!showWebcams || webcams.length === 0) {
+          // Clear all
+          markersRef.current.forEach(m => m.remove());
+          markersRef.current.clear();
+          return;
+      }
 
-  return (
-    <>
-      {webcams.map((cam) => (
-        <Marker
-          key={cam.id}
-          position={[cam.lat, cam.lng]}
-          icon={camIcon}
-          zIndexOffset={1000}
-          eventHandlers={{
-            click: (e) => {
-              e.originalEvent.stopPropagation();
-            },
-          }}
-        >
-          <Popup maxWidth={320} minWidth={240} className="webcam-popup">
-            <div className="font-sans" data-testid={`webcam-popup-${cam.id}`}>
-              {cam.thumbnail && (
-                <div className="relative">
-                  {cam.player ? (
-                    <a href={cam.player} target="_blank" rel="noopener noreferrer" data-testid={`webcam-link-${cam.id}`}>
-                      <img
-                        src={cam.thumbnail}
-                        alt={cam.title}
-                        className="w-full block"
-                        style={{ maxHeight: 200, objectFit: "cover", borderRadius: "inherit" }}
-                        data-testid={`webcam-thumbnail-${cam.id}`}
-                      />
-                    </a>
-                  ) : (
-                    <img
-                      src={cam.thumbnail}
-                      alt={cam.title}
-                      className="w-full block"
-                      style={{ maxHeight: 200, objectFit: "cover", borderRadius: "inherit" }}
-                      data-testid={`webcam-thumbnail-${cam.id}`}
-                    />
-                  )}
-                  <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5" style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.7))" }}>
-                    <p className="text-white text-xs font-medium truncate" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
-                      {[cam.city, cam.country].filter(Boolean).join(", ")}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {!cam.thumbnail && (
-                <div className="p-3">
-                  <p className="text-xs text-muted-foreground">
-                    {[cam.city, cam.country].filter(Boolean).join(", ")}
-                  </p>
-                </div>
-              )}
-            </div>
-          </Popup>
-        </Marker>
-      ))}
-    </>
-  );
+      const activeIds = new Set(webcams.map(w => w.id));
+
+      // Remove stale
+      for (const [id, marker] of markersRef.current.entries()) {
+          if (!activeIds.has(id)) {
+              marker.remove();
+              markersRef.current.delete(id);
+          }
+      }
+
+      // Add new
+      webcams.forEach(cam => {
+          if (!markersRef.current.has(cam.id)) {
+              // Create DOM element for icon
+              const el = document.createElement('div');
+              el.className = 'webcam-marker';
+              el.innerHTML = camIconSvg;
+              el.style.width = '28px';
+              el.style.height = '28px';
+              el.style.cursor = 'pointer';
+
+              // Create Popup content
+              const popupContent = document.createElement('div');
+              popupContent.className = "p-2 max-w-xs";
+              // We'll use innerHTML for simplicity, but strictly should allow React to render if complex.
+              // For a simple popup:
+              popupContent.innerHTML = `
+                <h3 class="font-bold text-sm mb-1">${cam.title}</h3>
+                <p class="text-xs text-muted-foreground mb-2">${cam.city}, ${cam.country}</p>
+                ${cam.thumbnail ? 
+                    `<div class="aspect-video relative bg-slate-100 rounded overflow-hidden">
+                        <img src="${cam.thumbnail}" alt="${cam.title}" class="w-full h-full object-cover" loading="lazy" />
+                     </div>` 
+                    : ''}
+                ${cam.player ? 
+                     `<div class="mt-2 text-xs">
+                        <a href="${cam.player}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">
+                            Open Stream ↗
+                        </a>
+                      </div>`
+                    : ''}
+              `;
+
+              const popup = new maplibregl.Popup({ offset: 25 })
+                  .setDOMContent(popupContent);
+
+              const marker = new maplibregl.Marker({ element: el })
+                  .setLngLat([cam.lng, cam.lat]) // MapLibre is [lng, lat]
+                  .setPopup(popup)
+                  .addTo(map);
+
+              markersRef.current.set(cam.id, marker);
+          }
+      });
+
+  }, [webcams, map, showWebcams]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+      return () => {
+          markersRef.current.forEach(m => m.remove());
+          markersRef.current.clear();
+      };
+  }, []);
+
+  return null; // No DOM rendered by React
 }
