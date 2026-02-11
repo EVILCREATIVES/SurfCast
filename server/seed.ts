@@ -1,6 +1,4 @@
-import { getDb } from "./db";
-
-const db = getDb();
+import { db } from "./db";
 import { surfSpots, surfSessions, users } from "../shared/schema";
 import type { SessionTrackData } from "../shared/schema";
 

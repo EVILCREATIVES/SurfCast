@@ -1,8 +1,6 @@
-import { getDb } from "../../db";
+import { db } from "../../db";
 import { conversations, messages } from "../../../shared/schema";
 import { eq, desc } from "drizzle-orm";
-
-const db = getDb();
 
 export interface IChatStorage {
   getConversation(id: number): Promise<typeof conversations.$inferSelect | undefined>;
