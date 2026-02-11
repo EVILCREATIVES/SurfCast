@@ -94,7 +94,7 @@ const VERT_DRAW = `
     v_speed = length(velocity) / length(u_wind_max);
 
     vec2 screen_pos = pos * u_scale + u_offset;
-    float size = mix(1.0, 2.0, v_speed);
+    float size = mix(1.5, 3.0, v_speed);
     gl_PointSize = size;
     gl_Position = vec4(screen_pos * 2.0 - 1.0, 0, 1);
   }
@@ -106,11 +106,13 @@ const FRAG_DRAW = `
   void main() {
     vec3 c;
     float s = v_speed;
-    if (s < 0.2) c = mix(vec3(0.7, 0.85, 1.0), vec3(0.4, 0.9, 1.0), s / 0.2);
-    else if (s < 0.4) c = mix(vec3(0.4, 0.9, 1.0), vec3(0.2, 1.0, 0.6), (s - 0.2) / 0.2);
-    else if (s < 0.6) c = mix(vec3(0.2, 1.0, 0.6), vec3(0.9, 1.0, 0.2), (s - 0.4) / 0.2);
-    else if (s < 0.8) c = mix(vec3(0.9, 1.0, 0.2), vec3(1.0, 0.6, 0.1), (s - 0.6) / 0.2);
-    else c = mix(vec3(1.0, 0.6, 0.1), vec3(1.0, 0.2, 0.2), (s - 0.8) / 0.2);
+    // Ventusky-style smooth gradient: Blue -> Cyan -> Green -> Yellow -> Red -> Purple
+    if (s < 0.15)      c = mix(vec3(0.0, 0.2, 0.6), vec3(0.0, 0.6, 0.8), s / 0.15);       // Deep Blue -> Cyan
+    else if (s < 0.35) c = mix(vec3(0.0, 0.6, 0.8), vec3(0.0, 0.7, 0.2), (s - 0.15) / 0.2); // Cyan -> Green
+    else if (s < 0.55) c = mix(vec3(0.0, 0.7, 0.2), vec3(0.9, 0.9, 0.0), (s - 0.35) / 0.2); // Green -> Yellow
+    else if (s < 0.75) c = mix(vec3(0.9, 0.9, 0.0), vec3(1.0, 0.3, 0.0), (s - 0.55) / 0.2); // Yellow -> Red
+    else               c = mix(vec3(1.0, 0.3, 0.0), vec3(0.8, 0.0, 0.8), (s - 0.75) / 0.25); // Red -> Purple
+    
     gl_FragColor = vec4(c, 1.0);
   }
 `;
@@ -132,7 +134,8 @@ const FRAG_SCREEN = `
   varying vec2 v_tex_pos;
   void main() {
     vec4 color = texture2D(u_screen, vec2(v_tex_pos.x, 1.0 - v_tex_pos.y));
-    float a = min(1.0, max(color.r, max(color.g, color.b)) * 1.5);
+    // Boost alpha to show trails clearly even when faint
+    float a = min(1.0, length(color.rgb) * 2.0);
     gl_FragColor = vec4(color.rgb * u_opacity, a * u_opacity);
   }
 `;
@@ -222,8 +225,8 @@ export class WindGL {
   private particleStateResolution: number = 0;
   private numParticles: number = 0;
 
-  fadeOpacity = 0.993;
-  speedFactor = 0.8;
+  fadeOpacity = 0.985;
+  speedFactor = 0.5;
   dropRate = 0.003;
   dropRateBump = 0.01;
 
@@ -247,7 +250,7 @@ export class WindGL {
     this.indexBuffer = gl.createBuffer()!;
     this.framebuffer = gl.createFramebuffer()!;
 
-    this.setNumParticles(65536);
+    this.setNumParticles(262144); // Increased to 512x512 for higher density like Ventusky
     this.resizeScreen();
   }
 

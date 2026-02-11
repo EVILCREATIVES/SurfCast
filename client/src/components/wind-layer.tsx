@@ -294,15 +294,17 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     wind.setBBox(south, north, west, east);
 
     const zoom = map.getZoom();
+    // Ventusky Style: High density, slower movement for continuous flow
+    const particleCount = 262144; // 512x512
     if (zoom > 8) {
-      wind.setNumParticles(65536);
-      wind.speedFactor = 0.5;
+      wind.setNumParticles(particleCount);
+      wind.speedFactor = 0.2;
     } else if (zoom > 5) {
-      wind.setNumParticles(65536);
-      wind.speedFactor = 0.7;
+      wind.setNumParticles(particleCount);
+      wind.speedFactor = 0.3;
     } else {
-      wind.setNumParticles(65536);
-      wind.speedFactor = 0.8;
+      wind.setNumParticles(particleCount);
+      wind.speedFactor = 0.4;
     }
 
     const updateViewport = () => {
