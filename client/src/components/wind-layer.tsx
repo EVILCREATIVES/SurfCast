@@ -1,3 +1,4 @@
+// /mnt/data/wind-layer.tsx
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useMap, useMapEvents } from "react-leaflet";
 import { createPortal } from "react-dom";
@@ -59,7 +60,7 @@ function seedHash(lat: number, lng: number): number {
 }
 
 function seededRandom(seed: number, index: number): number {
-  let x = Math.sin(seed * 9301 + index * 49297 + 233280) * 49297;
+  const x = Math.sin(seed * 9301 + index * 49297 + 233280) * 49297;
   return x - Math.floor(x);
 }
 
@@ -80,7 +81,11 @@ function interpolateWind(
   map: L.Map,
   paneOffset: { x: number; y: number }
 ): { u: number; v: number; speed: number } | null {
-  let totalW = 0, uSum = 0, vSum = 0, speedSum = 0;
+  let totalW = 0,
+    uSum = 0,
+    vSum = 0,
+    speedSum = 0;
+
   for (const pt of points) {
     const px = map.latLngToContainerPoint([pt.lat, pt.lng]);
     const sx = px.x - paneOffset.x;
@@ -88,6 +93,7 @@ function interpolateWind(
     const dx = x - sx;
     const dy = y - sy;
     const d2 = dx * dx + dy * dy;
+
     if (d2 < 1) {
       const rad = (pt.windDir * Math.PI) / 180;
       return {
@@ -96,6 +102,7 @@ function interpolateWind(
         speed: pt.windSpeed,
       };
     }
+
     const w = 1 / (d2 * d2);
     totalW += w;
     const rad = (pt.windDir * Math.PI) / 180;
@@ -103,28 +110,41 @@ function interpolateWind(
     vSum += -Math.cos(rad) * pt.windSpeed * w;
     speedSum += pt.windSpeed * w;
   }
+
   if (totalW === 0) return null;
   return { u: uSum / totalW, v: vSum / totalW, speed: speedSum / totalW };
 }
 
 export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
   const map = useMap();
+
   const windCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
   const windGlRef = useRef<WindGL | null>(null);
+
   const animFrameRef = useRef<number>(0);
   const waveAnimFrameRef = useRef<number>(0);
   const fallbackAnimRef = useRef<number>(0);
+
   const [points, setPoints] = useState<GridPoint[]>([]);
   const pointsRef = useRef<GridPoint[]>([]);
-  const fetchTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastBoundsRef = useRef<string>("");
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-  const windDataBoundsRef = useRef<{ south: number; north: number; west: number; east: number }>({ south: -90, north: 90, west: -180, east: 180 });
-  const webglSupported = useRef<boolean | null>(null);
-
   pointsRef.current = points;
 
+  const fetchTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastBoundsRef = useRef<string>("");
+
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  // The wind texture bbox we encoded (stays fixed until we refetch points / re-init)
+  const windDataBoundsRef = useRef<{ south: number; north: number; west: number; east: number }>({
+    south: -90,
+    north: 90,
+    west: -180,
+    east: 180,
+  });
+
+  const webglSupported = useRef<boolean | null>(null);
   const visible = showWind || showWaves;
 
   useEffect(() => {
@@ -138,7 +158,11 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       overlay.className = "wind-wave-overlay";
 
       const rect = container.getBoundingClientRect();
-      overlay.style.cssText = `position:absolute;top:0;left:0;width:${Math.round(rect.width)}px;height:${Math.round(rect.height)}px;pointer-events:none;z-index:450;overflow:hidden;`;
+      overlay.style.cssText = `position:absolute;top:0;left:0;width:${Math.round(
+        rect.width
+      )}px;height:${Math.round(
+        rect.height
+      )}px;pointer-events:none;z-index:450;overflow:hidden;`;
 
       const markerPane = mapPane.querySelector(".leaflet-marker-pane");
       if (markerPane) {
@@ -147,6 +171,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         mapPane.appendChild(overlay);
       }
     }
+
     setPortalTarget(overlay);
 
     const syncOverlaySize = () => {
@@ -154,6 +179,8 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       const rect = container.getBoundingClientRect();
       overlay.style.width = `${Math.round(rect.width)}px`;
       overlay.style.height = `${Math.round(rect.height)}px`;
+
+      // Keep overlay aligned with Leaflet's internal pan transform
       const offset = getMapPaneOffset(map);
       overlay.style.left = `${-offset.x}px`;
       overlay.style.top = `${-offset.y}px`;
@@ -173,41 +200,47 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<NodeJS.Timeout>();
 
-  const fetchGridData = useCallback(async (isRetry = false) => {
-    const bounds = map.getBounds();
-    const boundsKey = `${bounds.getSouth().toFixed(1)},${bounds.getNorth().toFixed(1)},${bounds.getWest().toFixed(1)},${bounds.getEast().toFixed(1)}`;
+  const fetchGridData = useCallback(
+    async (isRetry = false) => {
+      const bounds = map.getBounds();
+      const boundsKey = `${bounds.getSouth().toFixed(1)},${bounds.getNorth().toFixed(
+        1
+      )},${bounds.getWest().toFixed(1)},${bounds.getEast().toFixed(1)}`;
 
-    if (!isRetry && boundsKey === lastBoundsRef.current) return;
-    lastBoundsRef.current = boundsKey;
+      if (!isRetry && boundsKey === lastBoundsRef.current) return;
+      lastBoundsRef.current = boundsKey;
 
-    try {
-      const res = await fetch(
-        `/api/grid-weather?south=${bounds.getSouth()}&north=${bounds.getNorth()}&west=${bounds.getWest()}&east=${bounds.getEast()}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const pts = data.points || [];
-        if (pts.length > 0) {
-          retryCountRef.current = 0;
-          setPoints(pts);
-        } else if (retryCountRef.current < 3) {
+      try {
+        const res = await fetch(
+          `/api/grid-weather?south=${bounds.getSouth()}&north=${bounds.getNorth()}&west=${bounds.getWest()}&east=${bounds.getEast()}`
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          const pts = data.points || [];
+          if (pts.length > 0) {
+            retryCountRef.current = 0;
+            setPoints(pts);
+          } else if (retryCountRef.current < 3) {
+            retryCountRef.current++;
+            const delay = Math.min(5000 * Math.pow(2, retryCountRef.current - 1), 30000);
+            lastBoundsRef.current = "";
+            retryTimerRef.current = setTimeout(() => fetchGridData(true), delay);
+          }
+        } else if (res.status === 429 && retryCountRef.current < 3) {
           retryCountRef.current++;
           const delay = Math.min(5000 * Math.pow(2, retryCountRef.current - 1), 30000);
           lastBoundsRef.current = "";
           retryTimerRef.current = setTimeout(() => fetchGridData(true), delay);
+        } else {
+          lastBoundsRef.current = "";
         }
-      } else if (res.status === 429 && retryCountRef.current < 3) {
-        retryCountRef.current++;
-        const delay = Math.min(5000 * Math.pow(2, retryCountRef.current - 1), 30000);
-        lastBoundsRef.current = "";
-        retryTimerRef.current = setTimeout(() => fetchGridData(true), delay);
-      } else {
+      } catch {
         lastBoundsRef.current = "";
       }
-    } catch {
-      lastBoundsRef.current = "";
-    }
-  }, [map]);
+    },
+    [map]
+  );
 
   useMapEvents({
     moveend() {
@@ -223,26 +256,28 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
   });
 
   useEffect(() => {
-    if (visible) {
-      fetchGridData();
-    }
+    if (visible) fetchGridData();
     return () => {
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     };
   }, [visible, fetchGridData]);
 
-  const syncCanvasSize = useCallback((canvas: HTMLCanvasElement) => {
-    const container = map.getContainer();
-    const rect = container.getBoundingClientRect();
-    const w = Math.round(rect.width);
-    const h = Math.round(rect.height);
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
-      return true;
-    }
-    return false;
-  }, [map]);
+  const syncCanvasSize = useCallback(
+    (canvas: HTMLCanvasElement) => {
+      const container = map.getContainer();
+      const rect = container.getBoundingClientRect();
+      const w = Math.round(rect.width);
+      const h = Math.round(rect.height);
+
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+        return true;
+      }
+      return false;
+    },
+    [map]
+  );
 
   useEffect(() => {
     if (!showWind || points.length === 0 || !portalTarget) {
@@ -275,6 +310,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     }
 
     return initCanvas2DFallback(canvas);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [points, showWind, map, syncCanvasSize, portalTarget]);
 
   function initWebGL(gl: WebGLRenderingContext, canvas: HTMLCanvasElement) {
@@ -289,22 +325,22 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
     windDataBoundsRef.current = { south, north, west, east };
 
+    // IMPORTANT:
+    // With the updated ./webgl-wind implementation, this encoding is Mercator-correct.
+    // That makes the layer "stick" during pan/zoom (no lat-linear warp).
     const windData = encodeWindToTexture(points, south, north, west, east, 128, 64);
     wind.setWind(windData);
-    wind.setBBox(south, north, west, east);
 
     const zoom = map.getZoom();
-    // Ventusky Style: High density, slower movement for continuous flow
-    const particleCount = 262144; // 512x512
     if (zoom > 8) {
-      wind.setNumParticles(particleCount);
-      wind.speedFactor = 0.2;
+      wind.setNumParticles(65536);
+      wind.speedFactor = 0.5;
     } else if (zoom > 5) {
-      wind.setNumParticles(particleCount);
-      wind.speedFactor = 0.3;
+      wind.setNumParticles(65536);
+      wind.speedFactor = 0.7;
     } else {
-      wind.setNumParticles(particleCount);
-      wind.speedFactor = 0.4;
+      wind.setNumParticles(65536);
+      wind.speedFactor = 0.8;
     }
 
     const updateViewport = () => {
@@ -315,6 +351,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
       const db = windDataBoundsRef.current;
 
+      // Container coordinates (origin top-left)
       const tlScreen = map.latLngToContainerPoint([db.north, db.west]);
       const brScreen = map.latLngToContainerPoint([db.south, db.east]);
 
@@ -326,6 +363,9 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
       const scaleX = brX - tlX;
       const scaleY = brY - tlY;
 
+      // WebGL NDC expects Y-up; our particle space is Y-up in screenUV.
+      // Leaflet gives Y-down, so we convert using (1 - y).
+      // offset.y anchored to bottom of bbox: 1 - brY
       wind.setViewport([tlX, 1.0 - brY], [scaleX, scaleY]);
     };
 
@@ -411,6 +451,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         const prevX = p.x;
         const prevY = p.y;
         const speedScale = 0.12;
+
         p.x += wind.u * speedScale;
         p.y -= wind.v * speedScale;
         p.age++;
@@ -420,7 +461,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
           continue;
         }
 
-        const fade = 1 - (p.age / p.maxAge);
+        const fade = 1 - p.age / p.maxAge;
         ctx.beginPath();
         ctx.moveTo(prevX, prevY);
         ctx.lineTo(p.x, p.y);
@@ -429,8 +470,8 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         ctx.lineWidth = 0.8;
         ctx.stroke();
       }
-      ctx.globalAlpha = 1;
 
+      ctx.globalAlpha = 1;
       fallbackAnimRef.current = requestAnimationFrame(animate);
     };
 
@@ -467,6 +508,7 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+
       syncCanvasSize(canvas);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -486,8 +528,8 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
         const pixel = map.latLngToContainerPoint([pt.lat, pt.lng]);
         const x = pixel.x - paneOffset.x + offsetX;
         const y = pixel.y - paneOffset.y + offsetY;
-        if (x < -80 || x > canvas.width + 80 || y < -80 || y > canvas.height + 80)
-          continue;
+
+        if (x < -80 || x > canvas.width + 80 || y < -80 || y > canvas.height + 80) continue;
 
         const col = getWaveRingColor(pt.waveHeight);
         const period = pt.wavePeriod || 8;
@@ -564,20 +606,8 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
   return createPortal(
     <>
-      {showWaves && (
-        <canvas
-          ref={waveCanvasRef}
-          style={canvasStyle}
-          data-testid="canvas-waves"
-        />
-      )}
-      {showWind && (
-        <canvas
-          ref={windCanvasRef}
-          style={canvasStyle}
-          data-testid="canvas-particles"
-        />
-      )}
+      {showWaves && <canvas ref={waveCanvasRef} style={canvasStyle} data-testid="canvas-waves" />}
+      {showWind && <canvas ref={windCanvasRef} style={canvasStyle} data-testid="canvas-particles" />}
     </>,
     portalTarget
   );
