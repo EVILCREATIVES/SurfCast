@@ -1,5 +1,7 @@
 import { type User, type InsertUser, type SurfSpot, type InsertSurfSpot, type SurfSession, type InsertSurfSession, type Conversation, type Message, users, surfSpots, surfSessions, conversations, messages } from "../shared/schema";
-import { db } from "./db";
+import { getDb } from "./db";
+
+const db = getDb();
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
