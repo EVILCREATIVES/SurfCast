@@ -144,7 +144,7 @@ const FRAG_FADE = `
   varying vec2 v_tex_pos;
   void main() {
     vec4 color = texture2D(u_screen, v_tex_pos);
-    gl_FragColor = vec4(floor(color.rgb * u_fade * 255.0) / 255.0, 1.0);
+    gl_FragColor = vec4(floor(color.rgb * u_fade * 255.0) / 255.0, floor(color.a * u_fade * 255.0) / 255.0);
   }
 `;
 
