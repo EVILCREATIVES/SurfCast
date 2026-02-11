@@ -261,12 +261,12 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
     syncCanvasSize(canvas);
 
     if (webglSupported.current === null) {
-      const testGl = canvas.getContext("webgl", { premultipliedAlpha: false, alpha: true });
+      const testGl = canvas.getContext("webgl", { premultipliedAlpha: true, alpha: true });
       webglSupported.current = !!testGl;
     }
 
     if (webglSupported.current) {
-      const gl = canvas.getContext("webgl", { premultipliedAlpha: false, alpha: true });
+      const gl = canvas.getContext("webgl", { premultipliedAlpha: true, alpha: true });
       if (!gl) {
         webglSupported.current = false;
       } else {
