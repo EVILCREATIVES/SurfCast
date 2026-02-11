@@ -295,14 +295,14 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
     const zoom = map.getZoom();
     if (zoom > 8) {
-      wind.setNumParticles(16384);
-      wind.speedFactor = 0.15;
-    } else if (zoom > 5) {
       wind.setNumParticles(32768);
-      wind.speedFactor = 0.20;
+      wind.speedFactor = 0.3;
+    } else if (zoom > 5) {
+      wind.setNumParticles(65536);
+      wind.speedFactor = 0.4;
     } else {
       wind.setNumParticles(65536);
-      wind.speedFactor = 0.25;
+      wind.speedFactor = 0.5;
     }
 
     const updateViewport = () => {

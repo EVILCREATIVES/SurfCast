@@ -53,7 +53,7 @@ const FRAG_UPDATE = `
     float speed_t = length(velocity) / length(u_wind_max);
 
     float distortion = cos(radians(mix(u_bbox.y, u_bbox.w, pos.y) * 180.0 - 90.0));
-    vec2 offset = vec2(velocity.x / distortion, velocity.y) * u_speed_factor * 0.0001;
+    vec2 offset = vec2(velocity.x / distortion, velocity.y) * u_speed_factor * 0.001;
     pos = fract(pos + offset + 1.0);
 
     vec2 seed = (v_tex_pos + pos) * u_rand_seed;
@@ -133,7 +133,8 @@ const FRAG_SCREEN = `
   varying vec2 v_tex_pos;
   void main() {
     vec4 color = texture2D(u_screen, vec2(v_tex_pos.x, 1.0 - v_tex_pos.y));
-    gl_FragColor = vec4(color.rgb * u_opacity, color.a * u_opacity);
+    float a = max(color.r, max(color.g, color.b));
+    gl_FragColor = vec4(color.rgb, a * u_opacity);
   }
 `;
 
@@ -144,7 +145,7 @@ const FRAG_FADE = `
   varying vec2 v_tex_pos;
   void main() {
     vec4 color = texture2D(u_screen, v_tex_pos);
-    gl_FragColor = vec4(floor(color.rgb * u_fade * 255.0) / 255.0, floor(color.a * u_fade * 255.0) / 255.0);
+    gl_FragColor = vec4(floor(color.rgb * u_fade * 255.0) / 255.0, 1.0);
   }
 `;
 
@@ -222,8 +223,8 @@ export class WindGL {
   private particleStateResolution: number = 0;
   private numParticles: number = 0;
 
-  fadeOpacity = 0.94;
-  speedFactor = 0.25;
+  fadeOpacity = 0.96;
+  speedFactor = 0.5;
   dropRate = 0.003;
   dropRateBump = 0.01;
 
@@ -331,7 +332,7 @@ export class WindGL {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     const prog = this.screenProgram;
     gl.useProgram(prog);
