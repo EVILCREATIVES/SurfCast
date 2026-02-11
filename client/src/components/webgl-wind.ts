@@ -53,7 +53,7 @@ const FRAG_UPDATE = `
     float speed_t = length(velocity) / length(u_wind_max);
 
     float distortion = cos(radians(mix(u_bbox.y, u_bbox.w, pos.y) * 180.0 - 90.0));
-    vec2 offset = vec2(velocity.x / distortion, velocity.y) * u_speed_factor * 0.001;
+    vec2 offset = vec2(velocity.x / distortion, velocity.y) * u_speed_factor * 0.0003;
     pos = fract(pos + offset + 1.0);
 
     vec2 seed = (v_tex_pos + pos) * u_rand_seed;
@@ -94,7 +94,7 @@ const VERT_DRAW = `
     v_speed = length(velocity) / length(u_wind_max);
 
     vec2 screen_pos = pos * u_scale + u_offset;
-    float size = mix(2.0, 4.5, v_speed);
+    float size = mix(1.0, 2.0, v_speed);
     gl_PointSize = size;
     gl_Position = vec4(screen_pos * 2.0 - 1.0, 0, 1);
   }
@@ -106,12 +106,11 @@ const FRAG_DRAW = `
   void main() {
     vec3 c;
     float s = v_speed;
-    if (s < 0.15) c = mix(vec3(0.31, 0.71, 1.0), vec3(0.24, 0.82, 0.67), s / 0.15);
-    else if (s < 0.3) c = mix(vec3(0.24, 0.82, 0.67), vec3(0.39, 0.9, 0.31), (s - 0.15) / 0.15);
-    else if (s < 0.5) c = mix(vec3(0.39, 0.9, 0.31), vec3(0.78, 0.9, 0.2), (s - 0.3) / 0.2);
-    else if (s < 0.7) c = mix(vec3(0.78, 0.9, 0.2), vec3(1.0, 0.75, 0.12), (s - 0.5) / 0.2);
-    else if (s < 0.85) c = mix(vec3(1.0, 0.75, 0.12), vec3(1.0, 0.43, 0.12), (s - 0.7) / 0.15);
-    else c = mix(vec3(1.0, 0.43, 0.12), vec3(1.0, 0.2, 0.2), (s - 0.85) / 0.15);
+    if (s < 0.2) c = mix(vec3(0.7, 0.85, 1.0), vec3(0.4, 0.9, 1.0), s / 0.2);
+    else if (s < 0.4) c = mix(vec3(0.4, 0.9, 1.0), vec3(0.2, 1.0, 0.6), (s - 0.2) / 0.2);
+    else if (s < 0.6) c = mix(vec3(0.2, 1.0, 0.6), vec3(0.9, 1.0, 0.2), (s - 0.4) / 0.2);
+    else if (s < 0.8) c = mix(vec3(0.9, 1.0, 0.2), vec3(1.0, 0.6, 0.1), (s - 0.6) / 0.2);
+    else c = mix(vec3(1.0, 0.6, 0.1), vec3(1.0, 0.2, 0.2), (s - 0.8) / 0.2);
     gl_FragColor = vec4(c, 1.0);
   }
 `;
@@ -133,8 +132,8 @@ const FRAG_SCREEN = `
   varying vec2 v_tex_pos;
   void main() {
     vec4 color = texture2D(u_screen, vec2(v_tex_pos.x, 1.0 - v_tex_pos.y));
-    float a = max(color.r, max(color.g, color.b));
-    gl_FragColor = vec4(color.rgb, a * u_opacity);
+    float a = min(1.0, max(color.r, max(color.g, color.b)) * 1.5);
+    gl_FragColor = vec4(color.rgb * u_opacity, a * u_opacity);
   }
 `;
 
@@ -145,7 +144,7 @@ const FRAG_FADE = `
   varying vec2 v_tex_pos;
   void main() {
     vec4 color = texture2D(u_screen, v_tex_pos);
-    gl_FragColor = vec4(floor(color.rgb * u_fade * 255.0) / 255.0, 1.0);
+    gl_FragColor = vec4(color.rgb * u_fade, 1.0);
   }
 `;
 
@@ -223,8 +222,8 @@ export class WindGL {
   private particleStateResolution: number = 0;
   private numParticles: number = 0;
 
-  fadeOpacity = 0.985;
-  speedFactor = 0.5;
+  fadeOpacity = 0.993;
+  speedFactor = 0.8;
   dropRate = 0.003;
   dropRateBump = 0.01;
 

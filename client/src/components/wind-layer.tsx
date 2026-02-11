@@ -289,20 +289,20 @@ export function WindWaveLayer({ showWind, showWaves }: WindWaveLayerProps) {
 
     windDataBoundsRef.current = { south, north, west, east };
 
-    const windData = encodeWindToTexture(points, south, north, west, east, 64, 32);
+    const windData = encodeWindToTexture(points, south, north, west, east, 128, 64);
     wind.setWind(windData);
     wind.setBBox(south, north, west, east);
 
     const zoom = map.getZoom();
     if (zoom > 8) {
-      wind.setNumParticles(32768);
-      wind.speedFactor = 0.3;
-    } else if (zoom > 5) {
-      wind.setNumParticles(65536);
-      wind.speedFactor = 0.4;
-    } else {
       wind.setNumParticles(65536);
       wind.speedFactor = 0.5;
+    } else if (zoom > 5) {
+      wind.setNumParticles(65536);
+      wind.speedFactor = 0.7;
+    } else {
+      wind.setNumParticles(65536);
+      wind.speedFactor = 0.8;
     }
 
     const updateViewport = () => {
