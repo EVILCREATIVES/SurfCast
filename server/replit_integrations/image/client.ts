@@ -2,9 +2,15 @@ import fs from "node:fs";
 import OpenAI, { toFile } from "openai";
 import { Buffer } from "node:buffer";
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API,
-});
+let _openai: OpenAI | null = null;
+export function getOpenAI(): OpenAI {
+  if (!_openai) {
+    const key = process.env.OPENAI_API;
+    if (!key) throw new Error("OPENAI_API environment variable is not set");
+    _openai = new OpenAI({ apiKey: key });
+  }
+  return _openai;
+}
 
 /**
  * Generate an image and return as Buffer.

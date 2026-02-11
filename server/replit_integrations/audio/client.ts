@@ -6,9 +6,15 @@ import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API,
-});
+let _openai: OpenAI | null = null;
+export function getOpenAI(): OpenAI {
+  if (!_openai) {
+    const key = process.env.OPENAI_API;
+    if (!key) throw new Error("OPENAI_API environment variable is not set");
+    _openai = new OpenAI({ apiKey: key });
+  }
+  return _openai;
+}
 
 export type AudioFormat = "wav" | "mp3" | "webm" | "mp4" | "ogg" | "unknown";
 

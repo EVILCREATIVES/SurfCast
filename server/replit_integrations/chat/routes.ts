@@ -2,9 +2,15 @@ import type { Express, Request, Response } from "express";
 import OpenAI from "openai";
 import { chatStorage } from "./storage";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API,
-});
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) {
+    const key = process.env.OPENAI_API;
+    if (!key) throw new Error("OPENAI_API environment variable is not set");
+    _openai = new OpenAI({ apiKey: key });
+  }
+  return _openai;
+}
 
 export function registerChatRoutes(app: Express): void {
   // Get all conversations
@@ -80,7 +86,7 @@ export function registerChatRoutes(app: Express): void {
       res.setHeader("Connection", "keep-alive");
 
       // Stream response from OpenAI
-      const stream = await openai.chat.completions.create({
+      const stream = await getOpenAI().chat.completions.create({
         model: "gpt-5.1",
         messages: chatMessages,
         stream: true,
